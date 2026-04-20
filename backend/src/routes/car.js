@@ -141,21 +141,21 @@ router.get('/:carId/states', async (req, res) => {
   try {
     const pool = getPool();
     const { rows } = await pool.query(`
-      SELECT state, start_date, end_date FROM states
+      SELECT state::text, start_date, end_date FROM states
       WHERE car_id = $1
         AND (end_date IS NULL OR end_date >= NOW() - ($2::int * interval '1 hour'))
         AND start_date <= NOW()
 
       UNION ALL
 
-      SELECT 'driving' AS state, start_date, end_date FROM drives
+      SELECT 'driving'::text AS state, start_date, end_date FROM drives
       WHERE car_id = $1
         AND (end_date IS NULL OR end_date >= NOW() - ($2::int * interval '1 hour'))
         AND start_date <= NOW()
 
       UNION ALL
 
-      SELECT 'charging' AS state, start_date, end_date FROM charging_processes
+      SELECT 'charging'::text AS state, start_date, end_date FROM charging_processes
       WHERE car_id = $1
         AND (end_date IS NULL OR end_date >= NOW() - ($2::int * interval '1 hour'))
         AND start_date <= NOW()

@@ -64,7 +64,7 @@ function TimelineBar({ states, winStart, winEnd, label, onSegmentClick }) {
   const segs  = normalise(states, winStart, winEnd);
 
   return (
-    <div className="bg-muted rounded-lg p-3 flex flex-col justify-between min-h-[80px]">
+    <div className="bg-muted rounded-lg p-3 flex flex-col justify-between min-h-[80px] flex-1">
       <div className="flex justify-between text-[0.55rem] text-dim mb-2">
         <span className="text-[0.6rem] uppercase tracking-widest text-accent font-semibold">{label}</span>
         <span>{winEnd >= Date.now() - 60000 ? 'now' : fmtTime(winEnd)}</span>
@@ -142,7 +142,7 @@ export default function StatesWidget({ size = 'medium' }) {
   );
 
   return (
-    <div className={`flex flex-col gap-2`}>
+    <div className="flex flex-col gap-2 h-full">
       {size === 'small' && (
         <TimelineBar states={states} winStart={h12ago} winEnd={now}
                      label="Last 12h" onSegmentClick={setSelected} />
