@@ -34,7 +34,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Serve built frontend in production
-const publicDir = path.join(__dirname, '../../public');
+const publicDir = path.join(__dirname, '../public');
 if (existsSync(publicDir)) {
   app.use(express.static(publicDir));
   app.get('*', (req, res, next) => {
