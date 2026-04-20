@@ -16,7 +16,11 @@ router.get('/:carId/data', async (req, res) => {
     const { rows: main } = await pool.query(`
       SELECT
         c.name                          AS car_name,
-        s.state,
+        CASE
+          WHEN EXISTS(SELECT 1 FROM charging_processes WHERE car_id = s.car_id AND end_date IS NULL) THEN 'charging'
+          WHEN EXISTS(SELECT 1 FROM drives          WHERE car_id = s.car_id AND end_date IS NULL) THEN 'driving'
+          ELSE s.state::text
+        END                             AS state,
         p.battery_level,
         p.usable_battery_level,
         ROUND(p.rated_battery_range_km::numeric, 0) AS rated_range_km,
@@ -33,7 +37,10 @@ router.get('/:carId/data', async (req, res) => {
         p.date                          AS last_seen,
         cp.end_battery_level            AS last_charge_end_pct,
         ROUND(cp.charge_energy_added::numeric, 2)   AS last_charge_kwh,
-        cp.end_date                     AS last_charge_date
+        cp.end_date                     AS last_charge_date,
+        lc.charger_power,
+        lc.charger_actual_current,
+        lc.charger_voltage
       FROM states s
       JOIN cars c ON c.id = s.car_id
       LEFT JOIN positions p ON p.car_id = s.car_id
@@ -44,6 +51,14 @@ router.get('/:carId/data', async (req, res) => {
         ORDER BY end_date DESC
         LIMIT 1
       ) cp ON true
+      LEFT JOIN LATERAL (
+        SELECT ch.charger_power, ch.charger_actual_current, ch.charger_voltage
+        FROM charging_processes cp2
+        JOIN charges ch ON ch.charging_process_id = cp2.id
+        WHERE cp2.car_id = s.car_id AND cp2.end_date IS NULL
+        ORDER BY ch.date DESC
+        LIMIT 1
+      ) lc ON true
       WHERE s.car_id = $1
         AND s.end_date IS NULL
       ORDER BY p.date DESC

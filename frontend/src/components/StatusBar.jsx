@@ -16,6 +16,16 @@ export default function StatusBar({ data, loading, onRefresh, dbOk }) {
   const state = data?.state ?? 'offline';
   const cfg   = STATE_CONFIG[state] || { label: state, color: '#475569', pulse: null };
 
+  // Build charging details line
+  let chargingInfo = null;
+  if (state === 'charging' && data) {
+    const parts = [];
+    if (data.outside_temp != null) parts.push(data.outside_temp + '°');
+    if (data.charger_power  != null) parts.push(data.charger_power + ' kW');
+    if (data.charger_actual_current != null) parts.push(data.charger_actual_current + ' A');
+    if (parts.length) chargingInfo = parts.join(' · ');
+  }
+
   return (
     <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
       <div className="flex items-center gap-3">
@@ -27,9 +37,11 @@ export default function StatusBar({ data, loading, onRefresh, dbOk }) {
             {data?.car_name || 'Tesla'}{' '}
             <span className="text-sm font-normal text-dim">— {cfg.label}</span>
           </h1>
-          {data?.last_seen && (
+          {chargingInfo ? (
+            <p className="text-[0.65rem] text-dim mt-0.5">{chargingInfo}</p>
+          ) : data?.last_seen ? (
             <p className="text-[0.65rem] text-dim mt-0.5">Last seen {timeSince(data.last_seen)}</p>
-          )}
+          ) : null}
         </div>
       </div>
 
