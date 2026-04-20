@@ -22,7 +22,7 @@ const WIDGET_META = {
   monthly_consumption: { label: 'Monthly Consumption', wide: false },
   recent_drives:       { label: 'Today & Yesterday',   wide: true  },
   charge_cost:         { label: 'Charging Cost',       wide: true  },
-  links:               { label: 'Quick Links',         wide: false },
+  links:               { label: 'Quick Links',         wide: true  },
   states:              { label: 'Car States',          wide: false },
 };
 

@@ -7,7 +7,7 @@ const STATE_CONFIG = {
   asleep:    { label: 'Asleep',    color: '#8b5cf6' },
   sleeping:  { label: 'Asleep',    color: '#8b5cf6' },
   online:    { label: 'Online',    color: '#22c55e' },
-  offline:   { label: 'Offline',   color: '#1e293b' },
+  offline:   { label: 'Offline',   color: '#4b5563' },
   suspended: { label: 'Suspended', color: '#334155' },
   updating:  { label: 'Updating',  color: '#84cc16' },
 };

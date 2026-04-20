@@ -28,6 +28,15 @@ router.put('/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+router.post('/reorder', (req, res) => {
+  const db   = getSqlite();
+  const rows = req.body; // [{id, position}]
+  const upd  = db.prepare('UPDATE links SET position=? WHERE id=?');
+  const tx   = db.transaction(() => rows.forEach(r => upd.run(r.position, r.id)));
+  tx();
+  res.json({ ok: true });
+});
+
 router.delete('/:id', (req, res) => {
   const db = getSqlite();
   const info = db.prepare('DELETE FROM links WHERE id=?').run(req.params.id);
@@ -35,38 +44,38 @@ router.delete('/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-// Proxy favicon fetch — avoids CORS issues in browser
+// Proxy favicon fetch — fetches the full page URL to get title + favicon
 router.get('/favicon', async (req, res) => {
   const url = req.query.url;
   if (!url) return res.status(400).json({ error: 'url required' });
   try {
-    const origin = new URL(url).origin;
-    // Try to get page title and favicon
-    const ctrl = new AbortController();
-    const timeout = setTimeout(() => ctrl.abort(), 4000);
-    const r = await fetch(origin, { signal: ctrl.signal, headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const parsed = new URL(url);
+    const origin = parsed.origin;
+    const ctrl   = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 5000);
+    // Fetch the full URL (not just origin) to get the right page title
+    const r = await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': 'Mozilla/5.0' } });
     clearTimeout(timeout);
     const html = await r.text();
 
-    // Extract title
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    const title = titleMatch ? titleMatch[1].trim().slice(0, 60) : new URL(url).hostname;
+    const title = titleMatch ? titleMatch[1].trim().slice(0, 60) : parsed.hostname;
 
-    // Try to find favicon in HTML
-    const faviconMatch = html.match(/<link[^>]+rel=["'](?:shortcut )?icon["'][^>]+href=["']([^"']+)["']/i)
-                      || html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["'](?:shortcut )?icon["']/i);
+    const faviconMatch =
+      html.match(/<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]+href=["']([^"']+)["']/i) ||
+      html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["'][^"']*icon[^"']*["']/i);
 
     let favicon = `${origin}/favicon.ico`;
     if (faviconMatch) {
       const href = faviconMatch[1];
-      favicon = href.startsWith('http') ? href : href.startsWith('/') ? origin + href : origin + '/' + href;
+      favicon = href.startsWith('http') ? href : new URL(href, url).href;
     }
 
     res.json({ title, favicon });
   } catch {
     try {
-      const origin = new URL(url).origin;
-      res.json({ title: new URL(url).hostname, favicon: `${origin}/favicon.ico` });
+      const parsed = new URL(url);
+      res.json({ title: parsed.hostname, favicon: `${parsed.origin}/favicon.ico` });
     } catch {
       res.json({ title: url, favicon: '' });
     }

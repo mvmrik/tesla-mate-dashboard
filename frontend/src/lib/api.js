@@ -96,6 +96,15 @@ export async function updateLink(id, data) {
   return r.json();
 }
 
+export async function reorderLinks(order) {
+  const r = await fetch(`${BASE}/links/reorder`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(order),
+  });
+  return r.json();
+}
+
 export async function deleteLink(id) {
   const r = await fetch(`${BASE}/links/${id}`, { method: 'DELETE' });
   return r.json();

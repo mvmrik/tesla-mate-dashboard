@@ -26,7 +26,7 @@ const WIDGETS = {
   monthly_consumption:  { component: MonthlyConsumptionWidget, title: 'Monthly Consumption'  },
   recent_drives:        { component: RecentDrivesWidget,       title: 'Today & Yesterday',   wide: true },
   charge_cost:          { component: ChargeCostWidget,         title: 'Charging Cost',       wide: true, noData: true },
-  links:                { component: LinksWidget,              title: 'Quick Links',         noData: true },
+  links:                { component: LinksWidget,              title: 'Quick Links',         noData: true, wide: true },
   states:               { component: StatesWidget,             title: 'Car States',           noData: true },
 };
 
