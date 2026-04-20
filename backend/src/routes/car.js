@@ -52,7 +52,7 @@ router.get('/:carId/data', async (req, res) => {
         LIMIT 1
       ) cp ON true
       LEFT JOIN LATERAL (
-        SELECT ch.charger_power, ch.charger_actual_current, ch.charger_voltage
+        SELECT ch.charger_power, ch.charger_actual_current, ch.charger_voltage, ch.outside_temp AS charging_outside_temp
         FROM charging_processes cp2
         JOIN charges ch ON ch.charging_process_id = cp2.id
         WHERE cp2.car_id = s.car_id AND cp2.end_date IS NULL
@@ -152,6 +152,8 @@ router.get('/:carId/data', async (req, res) => {
 
     res.json({
       ...row,
+      // During charging, use live temp from charges table (positions only updates while driving)
+      outside_temp: row.charging_outside_temp ?? row.outside_temp,
       month_stats: monthStats[0] || null,
       last_drives: lastDrives,
       outside_temp_min: tempStats[0]?.outside_temp_min ?? null,
