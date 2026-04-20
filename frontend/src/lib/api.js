@@ -66,6 +66,41 @@ export async function fetchSettings() {
   return r.json();
 }
 
+export async function fetchLinks() {
+  const r = await fetch(`${BASE}/links`);
+  if (!r.ok) return [];
+  return r.json();
+}
+
+export async function addLink(data) {
+  const r = await fetch(`${BASE}/links`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return r.json();
+}
+
+export async function updateLink(id, data) {
+  const r = await fetch(`${BASE}/links/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return r.json();
+}
+
+export async function deleteLink(id) {
+  const r = await fetch(`${BASE}/links/${id}`, { method: 'DELETE' });
+  return r.json();
+}
+
+export async function fetchFavicon(url) {
+  const r = await fetch(`${BASE}/links/favicon?url=${encodeURIComponent(url)}`);
+  if (!r.ok) return { title: '', favicon: '' };
+  return r.json();
+}
+
 export async function saveSettings(data) {
   const r = await fetch(`${BASE}/settings`, {
     method: 'PUT',

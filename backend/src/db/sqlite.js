@@ -51,6 +51,14 @@ function migrate(db) {
       key   TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS links (
+      id       INTEGER PRIMARY KEY AUTOINCREMENT,
+      url      TEXT NOT NULL,
+      title    TEXT NOT NULL DEFAULT '',
+      favicon  TEXT NOT NULL DEFAULT '',
+      position INTEGER NOT NULL DEFAULT 0
+    );
   `);
 
   // Seed default widget layout if empty

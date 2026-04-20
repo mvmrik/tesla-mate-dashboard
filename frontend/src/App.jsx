@@ -13,8 +13,9 @@ import LastChargeWidget   from './components/widgets/LastChargeWidget.jsx';
 import MonthStatsWidget   from './components/widgets/MonthStatsWidget.jsx';
 import RecentDrivesWidget from './components/widgets/RecentDrivesWidget.jsx';
 import ChargeCostWidget   from './components/widgets/ChargeCostWidget.jsx';
+import LinksWidget        from './components/widgets/LinksWidget.jsx';
 
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 
 const WIDGETS = {
   battery:       { component: BatteryWidget,       title: 'Battery & Range' },
@@ -24,6 +25,7 @@ const WIDGETS = {
   month_stats:   { component: MonthStatsWidget,     title: 'Monthly Stats',      wide: true },
   recent_drives: { component: RecentDrivesWidget,   title: 'Today & Yesterday',  wide: true },
   charge_cost:   { component: ChargeCostWidget,     title: 'Charging Cost',      wide: true, noData: true },
+  links:         { component: LinksWidget,          title: 'Quick Links',        noData: true },
 };
 
 export default function App() {

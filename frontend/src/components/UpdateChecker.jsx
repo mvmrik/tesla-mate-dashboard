@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const CURRENT = '1.2.0';
+const CURRENT = '1.3.0';
 const REPO    = 'mvmrik/tesla-mate-dashboard';
 
 function semverGt(a, b) {
