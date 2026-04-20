@@ -59,3 +59,18 @@ export async function saveWidgetLayout(carId, layout) {
   });
   return r.json();
 }
+
+export async function fetchSettings() {
+  const r = await fetch(`${BASE}/settings`);
+  if (!r.ok) return {};
+  return r.json();
+}
+
+export async function saveSettings(data) {
+  const r = await fetch(`${BASE}/settings`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return r.json();
+}

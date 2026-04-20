@@ -11,11 +11,19 @@ function TempBar({ value, min = -20, max = 50 }) {
   );
 }
 
-export default function ClimateWidget({ data }) {
-  if (!data) return (
-    <div className="flex flex-col gap-4 animate-pulse">
-      <div className="h-16 bg-muted rounded" />
-      <div className="h-16 bg-muted rounded" />
+export default function ClimateWidget({ data, size = 'medium' }) {
+  if (!data) return <div className="h-16 bg-muted rounded animate-pulse" />;
+
+  if (size === 'small') return (
+    <div className="flex items-center gap-4">
+      <div>
+        <p className="text-[0.6rem] text-dim">Out</p>
+        <p className="text-xl font-bold text-slate-100">{data.outside_temp != null ? data.outside_temp + '°' : '—'}</p>
+      </div>
+      <div>
+        <p className="text-[0.6rem] text-dim">In {data.is_climate_on && <span className="text-hi">❄</span>}</p>
+        <p className="text-xl font-bold text-slate-100">{data.inside_temp != null ? data.inside_temp + '°' : '—'}</p>
+      </div>
     </div>
   );
 
@@ -24,26 +32,20 @@ export default function ClimateWidget({ data }) {
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-muted rounded-lg p-3">
           <p className="text-[0.6rem] uppercase tracking-widest text-accent mb-1">Outside</p>
-          <p className="text-2xl font-bold text-slate-100">
-            {data.outside_temp != null ? data.outside_temp + '°' : '—'}
-          </p>
-          <TempBar value={data.outside_temp} />
+          <p className="text-2xl font-bold text-slate-100">{data.outside_temp != null ? data.outside_temp + '°' : '—'}</p>
+          {size === 'large' && <TempBar value={data.outside_temp} />}
         </div>
         <div className="bg-muted rounded-lg p-3">
           <p className="text-[0.6rem] uppercase tracking-widest text-accent mb-1">
             Inside {data.is_climate_on && <span className="text-hi">❄</span>}
           </p>
-          <p className="text-2xl font-bold text-slate-100">
-            {data.inside_temp != null ? data.inside_temp + '°' : '—'}
-          </p>
-          <TempBar value={data.inside_temp} />
+          <p className="text-2xl font-bold text-slate-100">{data.inside_temp != null ? data.inside_temp + '°' : '—'}</p>
+          {size === 'large' && <TempBar value={data.inside_temp} />}
         </div>
       </div>
-
-      {data.is_climate_on && (
+      {size === 'large' && data.is_climate_on && (
         <div className="flex items-center gap-2 text-hi text-sm">
-          <span>❄</span>
-          <span>Climate control is active</span>
+          <span>❄</span><span>Climate control is active</span>
         </div>
       )}
     </div>

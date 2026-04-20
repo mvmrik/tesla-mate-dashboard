@@ -9,6 +9,7 @@ import carRouter from './routes/car.js';
 import tariffsRouter from './routes/tariffs.js';
 import chargeCostRouter from './routes/chargeCost.js';
 import widgetsRouter from './routes/widgets.js';
+import settingsRouter from './routes/settings.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app  = express();
@@ -21,6 +22,7 @@ app.use('/api/car',         carRouter);
 app.use('/api/tariffs',     tariffsRouter);
 app.use('/api/charge-cost', chargeCostRouter);
 app.use('/api/widgets',     widgetsRouter);
+app.use('/api/settings',    settingsRouter);
 
 app.get('/api/health', async (req, res) => {
   const pg = await testConnection();

@@ -7,7 +7,7 @@ router.get('/:carId', (req, res) => {
   const carId = parseInt(req.params.carId) || 1;
   const db = getSqlite();
   const rows = db.prepare(`
-    SELECT widget_id, position, enabled
+    SELECT widget_id, position, enabled, size
     FROM widget_layout WHERE car_id = ?
     ORDER BY position
   `).all(carId);
@@ -21,15 +21,16 @@ router.put('/:carId', (req, res) => {
 
   const db = getSqlite();
   const upsert = db.prepare(`
-    INSERT INTO widget_layout (car_id, widget_id, position, enabled)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO widget_layout (car_id, widget_id, position, enabled, size)
+    VALUES (?, ?, ?, ?, ?)
     ON CONFLICT(car_id, widget_id) DO UPDATE SET
       position = excluded.position,
-      enabled  = excluded.enabled
+      enabled  = excluded.enabled,
+      size     = excluded.size
   `);
   const updateAll = db.transaction((items) => {
     for (const item of items) {
-      upsert.run(carId, item.widget_id, item.position, item.enabled ? 1 : 0);
+      upsert.run(carId, item.widget_id, item.position, item.enabled ? 1 : 0, item.size || 'medium');
     }
   });
   updateAll(layout);

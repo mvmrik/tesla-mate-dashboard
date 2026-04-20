@@ -38,6 +38,7 @@ function migrate(db) {
       widget_id TEXT    NOT NULL,
       position  INTEGER NOT NULL DEFAULT 0,
       enabled   INTEGER NOT NULL DEFAULT 1,
+      size      TEXT    NOT NULL DEFAULT 'medium',
       UNIQUE(car_id, widget_id)
     );
 

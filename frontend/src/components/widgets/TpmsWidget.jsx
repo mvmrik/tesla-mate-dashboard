@@ -14,27 +14,45 @@ function TpmsCell({ label, value }) {
   );
 }
 
-export default function TpmsWidget({ data }) {
-  if (!data) return (
-    <div className="grid grid-cols-2 gap-2 animate-pulse">
-      {[0,1,2,3].map(i => <div key={i} className="h-16 bg-muted rounded-lg" />)}
+export default function TpmsWidget({ data, size = 'medium' }) {
+  if (!data) return <div className="h-16 bg-muted rounded animate-pulse" />;
+
+  const vals = [
+    { label: 'FL', val: data.tpms_pressure_fl },
+    { label: 'FR', val: data.tpms_pressure_fr },
+    { label: 'RL', val: data.tpms_pressure_rl },
+    { label: 'RR', val: data.tpms_pressure_rr },
+  ];
+
+  const allOk = vals.every(v => v.val == null || parseFloat(v.val) >= 2.8);
+
+  if (size === 'small') return (
+    <div className="flex items-center justify-between gap-2">
+      {vals.map(({ label, val }) => {
+        const cls = tpmsClass(val);
+        return (
+          <div key={label} className="flex flex-col items-center">
+            <span className="text-[0.55rem] text-dim">{label}</span>
+            <span className={`text-sm font-bold ${cls || 'text-slate-200'}`}>
+              {val != null ? parseFloat(val).toFixed(1) : '—'}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 
-  const allOk = [data.tpms_pressure_fl, data.tpms_pressure_fr,
-                 data.tpms_pressure_rl, data.tpms_pressure_rr]
-    .every(v => v == null || (parseFloat(v) >= 2.8));
-
   return (
     <div className="flex flex-col gap-3">
-      {/* Car diagram layout: FL FR / RL RR */}
       <div className="grid grid-cols-2 gap-2">
-        <TpmsCell label="FL" value={data.tpms_pressure_fl} />
-        <TpmsCell label="FR" value={data.tpms_pressure_fr} />
-        <TpmsCell label="RL" value={data.tpms_pressure_rl} />
-        <TpmsCell label="RR" value={data.tpms_pressure_rr} />
+        {vals.map(({ label, val }) => <TpmsCell key={label} label={label} value={val} />)}
       </div>
-      {allOk && (
+      {size === 'large' && (
+        <p className={`text-xs text-center ${allOk ? 'text-success' : 'text-warning'}`}>
+          {allOk ? 'All pressures normal' : 'Check tyre pressure'}
+        </p>
+      )}
+      {size === 'medium' && allOk && (
         <p className="text-xs text-success text-center">All pressures normal</p>
       )}
     </div>
