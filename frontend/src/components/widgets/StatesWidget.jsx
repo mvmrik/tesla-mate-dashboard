@@ -12,36 +12,44 @@ const STATE_CONFIG = {
   updating:  { label: 'Updating',  color: '#84cc16' },
 };
 
+// Lower number = higher priority (driving wins over online)
+const PRIORITY = { driving: 0, charging: 1, updating: 1, asleep: 2, sleeping: 2, online: 3, suspended: 4, offline: 5 };
+
 function cfg(state) {
   return STATE_CONFIG[state] || { label: state, color: '#334155' };
 }
 
 function normalise(states, winStart, winEnd) {
-  const sorted = [...states].sort((a, b) =>
-    new Date(a.start_date) - new Date(b.start_date));
+  // Clip each segment to the window
+  const segs = states
+    .map(s => ({
+      state: s.state,
+      start: Math.max(new Date(s.start_date).getTime(), winStart),
+      end:   s.end_date ? Math.min(new Date(s.end_date).getTime(), winEnd) : winEnd,
+    }))
+    .filter(s => s.start < winEnd && s.end > winStart && s.end > s.start);
+
+  // Collect all boundary timestamps, then for each interval pick highest-priority state
+  const pts = new Set([winStart, winEnd]);
+  segs.forEach(s => { pts.add(s.start); pts.add(s.end); });
+  const boundaries = [...pts].sort((a, b) => a - b);
 
   const result = [];
-  let cursor = winStart;
-
-  for (const s of sorted) {
-    const start = Math.max(new Date(s.start_date).getTime(), winStart);
-    const end   = s.end_date
-      ? Math.min(new Date(s.end_date).getTime(), winEnd)
-      : winEnd;
-
-    if (start >= winEnd || end <= winStart) continue;
-
-    if (start > cursor) {
-      result.push({ state: 'offline', start: cursor, end: start });
+  for (let i = 0; i < boundaries.length - 1; i++) {
+    const iStart = boundaries[i], iEnd = boundaries[i + 1];
+    let best = null;
+    for (const s of segs) {
+      if (s.start <= iStart && s.end >= iEnd) {
+        const p = PRIORITY[s.state] ?? 6;
+        if (best === null || p < (PRIORITY[best.state] ?? 6)) best = s;
+      }
     }
-    if (end > Math.max(start, cursor)) {
-      result.push({ state: s.state, start: Math.max(start, cursor), end });
+    const state = best ? best.state : 'offline';
+    if (result.length && result[result.length - 1].state === state) {
+      result[result.length - 1].end = iEnd;
+    } else {
+      result.push({ state, start: iStart, end: iEnd });
     }
-    cursor = Math.max(cursor, end);
-  }
-
-  if (cursor < winEnd) {
-    result.push({ state: 'offline', start: cursor, end: winEnd });
   }
   return result;
 }
@@ -69,7 +77,7 @@ function TimelineBar({ states, winStart, winEnd, label, onSegmentClick }) {
         <span className="text-[0.6rem] uppercase tracking-widest text-accent font-semibold">{label}</span>
         <span>{winEnd >= Date.now() - 60000 ? 'now' : fmtTime(winEnd)}</span>
       </div>
-      <div className="w-full h-6 rounded-md overflow-hidden flex mt-auto" style={{ background: '#0f172a' }}>
+      <div className="w-full rounded-md overflow-hidden flex mt-auto" style={{ height: '1.4rem', background: '#0f172a' }}>
         {segs.map((seg, i) => {
           const w = Math.max(0.3, (seg.end - seg.start) / total * 100);
           return (
