@@ -1,35 +1,144 @@
 # TeslaMate Dashboard
 
-A beautiful, widget-based dashboard for [TeslaMate](https://github.com/adriankumpf/teslamate) — a lightweight alternative to Grafana.
+A beautiful, widget-based dashboard for your Tesla — built as a free alternative to Grafana.
 
-![Tesla UI inspired dark dashboard]
-
-## Features
-
-- **Tesla-style dark UI** — clean, minimal, inspired by the in-car display
-- **Widget system** — show/hide and reorder widgets from the UI
-- **Real-time data** — battery %, range, tyre pressures, temperatures, state
-- **Dual-tariff charging cost** — split kWh by day/night rates with per-month tariff management
-- **Monthly statistics** — drives, km, energy, efficiency
-- **Recent drives** — today & yesterday with route, distance, efficiency
-- **Responsive** — works on desktop and phone
-- **Zero extra databases** — connects read-only to your existing TeslaMate PostgreSQL; stores settings in a local SQLite file inside the container
+Made by [mvmrik](https://github.com/mvmrik)
 
 ---
 
-## Quick Start (Docker)
+## What is this?
 
-Add to your existing `docker-compose.yml`:
+If you use [TeslaMate](https://github.com/adriankumpf/teslamate) to track your Tesla, you already have all your car's data stored in a database. This dashboard gives you a clean, modern way to view that data — without needing to set up or learn Grafana.
+
+It shows things like:
+- 🔋 Battery level and range
+- 🛞 Tyre pressures
+- 🌡️ Inside and outside temperature
+- ⚡ Last charge details
+- 📊 Monthly driving statistics
+- 🗺️ Recent drives
+- 💶 Charging cost calculator with day/night electricity tariffs
+
+---
+
+## Requirements
+
+Before installing, you need:
+
+1. **TeslaMate** already running with Docker — [TeslaMate installation guide](https://docs.teslamate.org/docs/installation/docker)
+2. **Docker** and **Docker Compose** installed on your server or computer
+3. Your TeslaMate **database password** (you set this when you installed TeslaMate)
+
+That's it. No programming knowledge needed.
+
+---
+
+## Installation
+
+### Step 1 — Find your existing `docker-compose.yml`
+
+This is the file you used to install TeslaMate. Open it in a text editor.
+
+### Step 2 — Add the dashboard service
+
+Copy and paste this into your `docker-compose.yml`, at the same level as your other services:
 
 ```yaml
-services:
   teslamate-dashboard:
-    image: ghcr.io/yourusername/teslamate-dashboard:latest
+    image: mvmrik/teslamate-dashboard:latest
     restart: unless-stopped
     ports:
       - "4000:3000"
     environment:
-      DATABASE_URL: postgres://teslamate:YOUR_PASSWORD@database:5432/teslamate
+      DATABASE_URL: postgres://teslamate:YOUR_DB_PASSWORD@database:5432/teslamate
+      TIMEZONE: Europe/Sofia
+    volumes:
+      - teslamate-dashboard-data:/data
+    networks:
+      - teslamate
+```
+
+And at the bottom of your file, under `volumes:`, add:
+
+```yaml
+  teslamate-dashboard-data:
+```
+
+### Step 3 — Change the settings
+
+In the block you just pasted, change:
+
+| Value | What to put |
+|---|---|
+| `YOUR_DB_PASSWORD` | Your TeslaMate database password |
+| `Europe/Sofia` | Your timezone — [find yours here](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) |
+
+### Step 4 — Start it
+
+Run this command in the same folder as your `docker-compose.yml`:
+
+```bash
+docker compose up -d teslamate-dashboard
+```
+
+### Step 5 — Open it
+
+Go to `http://your-server-ip:4000` in your browser.
+
+Done! ✅
+
+---
+
+## Full example docker-compose.yml
+
+Here is what a complete setup looks like (your file may look slightly different):
+
+```yaml
+version: "3.8"
+
+services:
+  teslamate:
+    image: teslamate/teslamate:latest
+    restart: always
+    environment:
+      - ENCRYPTION_KEY=your-encryption-key
+      - DATABASE_USER=teslamate
+      - DATABASE_PASS=your-db-password
+      - DATABASE_NAME=teslamate
+      - DATABASE_HOST=database
+      - MQTT_HOST=mosquitto
+    ports:
+      - "4080:4000"
+    networks:
+      - teslamate
+
+  database:
+    image: postgres:16
+    restart: always
+    environment:
+      - POSTGRES_USER=teslamate
+      - POSTGRES_PASSWORD=your-db-password
+      - POSTGRES_DB=teslamate
+    volumes:
+      - teslamate-db:/var/lib/postgresql/data
+    networks:
+      - teslamate
+
+  grafana:
+    image: teslamate/grafana:latest
+    restart: always
+    ports:
+      - "3000:3000"
+    networks:
+      - teslamate
+
+  teslamate-dashboard:
+    image: mvmrik/teslamate-dashboard:latest
+    restart: unless-stopped
+    ports:
+      - "4000:3000"
+    environment:
+      DATABASE_URL: postgres://teslamate:your-db-password@database:5432/teslamate
       TIMEZONE: Europe/Sofia
     volumes:
       - teslamate-dashboard-data:/data
@@ -37,116 +146,94 @@ services:
       - teslamate
 
 volumes:
+  teslamate-db:
   teslamate-dashboard-data:
+
+networks:
+  teslamate:
 ```
-
-Then open `http://your-server:4000`.
-
-> **Tip:** Replace `database` with the service name of your PostgreSQL container. The `TIMEZONE` must match a valid [tz database name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
 
 ---
 
-## Environment Variables
+## Updating to a new version
+
+When a new version is released, run:
+
+```bash
+docker compose pull teslamate-dashboard
+docker compose up -d teslamate-dashboard
+```
+
+---
+
+## Charging cost calculator
+
+This is a unique feature not available in TeslaMate or Grafana.
+
+It lets you calculate exactly how much money you spent charging your Tesla, split by **day** and **night** electricity tariffs (useful if your electricity provider charges different rates at different times).
+
+**How to set it up:**
+1. Open the dashboard and find the **Charging Cost** widget
+2. Click **⚙ Prices**
+3. Select your home charging location
+4. Enter your electricity prices (day rate and night rate in EUR/kWh)
+5. Set the night hours (e.g. 22:00 to 06:00)
+6. Apply to the months you want
+7. Pick a date range and click **Calculate**
+
+Your tariff settings are saved locally inside the container and never sent anywhere.
+
+---
+
+## Environment variables
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `DATABASE_URL` | ✅ | — | PostgreSQL connection string for TeslaMate DB |
-| `TIMEZONE` | ❌ | `UTC` | Local timezone for charge time display (e.g. `Europe/Sofia`) |
-| `PORT` | ❌ | `3000` | Internal HTTP port |
-| `DATA_DIR` | ❌ | `/data` | Path for SQLite settings file inside container |
-
----
-
-## Build Locally
-
-```bash
-# Clone
-git clone https://github.com/yourusername/teslamate-dashboard.git
-cd teslamate-dashboard
-
-# Build Docker image
-docker build -t teslamate-dashboard .
-
-# Run
-docker run -p 4000:3000 \
-  -e DATABASE_URL="postgres://teslamate:password@localhost:5432/teslamate" \
-  -e TIMEZONE="Europe/Sofia" \
-  -v $(pwd)/data:/data \
-  teslamate-dashboard
-```
-
-### Development
-
-```bash
-# Backend
-cd backend && npm install && npm run dev
-
-# Frontend (separate terminal)
-cd frontend && npm install && npm run dev
-# Visit http://localhost:5173
-```
+| `DATABASE_URL` | ✅ Yes | — | Connection to your TeslaMate PostgreSQL database |
+| `TIMEZONE` | ❌ No | `UTC` | Your local timezone (e.g. `Europe/Sofia`, `Europe/London`) |
+| `PORT` | ❌ No | `3000` | Internal port (do not change) |
 
 ---
 
 ## Widgets
 
+You can show or hide widgets by clicking **⊞ Widgets** in the top right corner.
+
 | Widget | Description |
 |---|---|
-| **Battery & Range** | Battery %, rated/estimated range, odometer |
-| **Tyre Pressures** | FL/FR/RL/RR in bar with colour warnings |
-| **Temperature** | Inside/outside temp with climate status |
-| **Last Charge** | End battery %, kWh added, date |
-| **Monthly Stats** | Drives, km, time, energy, efficiency |
-| **Recent Drives** | Today & yesterday drive table |
-| **Charging Cost** | Dual-tariff day/night cost calculator with per-session breakdown |
-
-Click **⊞ Widgets** in the top-right to enable/disable widgets.
+| Battery & Range | Battery percentage, rated and estimated range, odometer |
+| Tyre Pressures | All four tyres in bar, with colour warnings if low |
+| Temperature | Outside and inside temperature, climate status |
+| Last Charge | End battery level, energy added, date |
+| Monthly Stats | Drives, distance, time, energy used, efficiency |
+| Recent Drives | Drives from today and yesterday |
+| Charging Cost | Day/night tariff cost calculator |
 
 ---
 
-## Dual-Tariff Charging Cost
+## Frequently asked questions
 
-This feature is unique to TeslaMate Dashboard. It splits charging kWh into **day** and **night** tariffs based on your electricity provider's time-of-use pricing.
+**Does this work without TeslaMate?**
+No. TeslaMate must be installed and collecting data from your car first.
 
-1. Click **⚙ Prices** inside the Charging Cost widget
-2. Select your home charging location (geofence from TeslaMate)
-3. Enter day/night prices (EUR/kWh) and the night window hours
-4. Apply to one or more months
-5. Run a date-range calculation to see cost breakdown per session
+**Does this replace TeslaMate or Grafana?**
+No. TeslaMate runs in the background as always. This dashboard is just a nicer way to view the data. You can keep Grafana too.
 
-Tariffs are stored locally in SQLite and never sent anywhere.
+**Is my data sent anywhere?**
+No. The dashboard connects only to your own database. Nothing is sent to any external server.
 
----
+**Can I use this on my phone?**
+Yes. The design is responsive and works well on mobile.
 
-## Architecture
-
-```
-teslamate-dashboard/
-├── backend/          Node.js + Express API
-│   └── src/
-│       ├── db/       postgres.js (TeslaMate, read-only), sqlite.js (settings)
-│       └── routes/   car, tariffs, chargeCost, widgets
-├── frontend/         React + Tailwind CSS SPA
-│   └── src/
-│       ├── components/widgets/   One file per widget
-│       └── lib/      api.js, utils.js
-└── Dockerfile        Multi-stage build
-```
+**What if I have multiple Teslas?**
+Currently the dashboard shows data for car ID 1 (the first car in TeslaMate). Multi-car support is planned.
 
 ---
-
-## Security
-
-- The app connects to TeslaMate PostgreSQL in **read-only** mode — it never writes to the TeslaMate database
-- Tariff data and widget layout are stored in a local SQLite file inside the container volume
-- No authentication by default — add a reverse proxy (nginx, Traefik) with basic auth if needed
-
----
-
-## Contributing
-
-PRs welcome! Please open an issue first for large changes.
 
 ## License
 
-MIT
+MIT — free to use, modify and share.
+
+---
+
+Made with ❤️ by [mvmrik](https://github.com/mvmrik)

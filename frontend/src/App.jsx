@@ -108,8 +108,16 @@ export default function App() {
           </div>
         )}
 
-        <footer className="mt-10 text-center text-xs text-dim">
-          TeslaMate Dashboard — Open Source
+        <footer className="mt-10 text-center text-xs text-dim flex flex-col gap-1">
+          <span>TeslaMate Dashboard <span className="text-[#2d2d3d]">v1.0.0</span></span>
+          <span>
+            Made with ♥ by{' '}
+            <a href="https://github.com/mvmrik" target="_blank" rel="noopener"
+               className="text-accent hover:text-hi transition-colors">mvmrik</a>
+            {' '}·{' '}
+            <a href="https://github.com/mvmrik/tesla-mate-dashboard" target="_blank" rel="noopener"
+               className="hover:text-slate-300 transition-colors">GitHub</a>
+          </span>
         </footer>
       </div>
 
