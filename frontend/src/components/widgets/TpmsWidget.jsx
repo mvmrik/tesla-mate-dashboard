@@ -1,60 +1,55 @@
 import React from 'react';
-import { tpmsClass } from '../../lib/utils.js';
+import Cell, { CellRow, CellGrid2x2, tpmsColor, tpmsBar } from '../Cell.jsx';
 
-function TpmsCell({ label, value }) {
-  const cls = tpmsClass(value);
-  return (
-    <div className="flex flex-col items-center gap-1 bg-muted rounded-lg p-2">
-      <span className="text-[0.55rem] uppercase tracking-widest text-dim">{label}</span>
-      <span className={`text-lg font-bold ${cls || 'text-slate-200'}`}>
-        {value != null ? parseFloat(value).toFixed(1) : '—'}
-      </span>
-      <span className="text-[0.6rem] text-dim">bar</span>
-    </div>
-  );
+function avg(...vals) {
+  const valid = vals.filter(v => v != null);
+  if (!valid.length) return null;
+  return Math.round(valid.reduce((a, b) => a + b, 0) / valid.length * 10) / 10;
 }
 
 export default function TpmsWidget({ data, size = 'medium' }) {
-  if (!data) return <div className="h-16 bg-muted rounded animate-pulse" />;
+  if (!data) return <SkeletonCells size={size} />;
 
-  const vals = [
-    { label: 'FL', val: data.tpms_pressure_fl },
-    { label: 'FR', val: data.tpms_pressure_fr },
-    { label: 'RL', val: data.tpms_pressure_rl },
-    { label: 'RR', val: data.tpms_pressure_rr },
-  ];
+  const fl = data.tpms_pressure_fl != null ? parseFloat(data.tpms_pressure_fl) : null;
+  const fr = data.tpms_pressure_fr != null ? parseFloat(data.tpms_pressure_fr) : null;
+  const rl = data.tpms_pressure_rl != null ? parseFloat(data.tpms_pressure_rl) : null;
+  const rr = data.tpms_pressure_rr != null ? parseFloat(data.tpms_pressure_rr) : null;
 
-  const allOk = vals.every(v => v.val == null || parseFloat(v.val) >= 2.8);
+  const allAvg   = avg(fl, fr, rl, rr);
+  const frontAvg = avg(fl, fr);
+  const rearAvg  = avg(rl, rr);
 
   if (size === 'small') return (
-    <div className="flex items-center justify-between gap-2">
-      {vals.map(({ label, val }) => {
-        const cls = tpmsClass(val);
-        return (
-          <div key={label} className="flex flex-col items-center">
-            <span className="text-[0.55rem] text-dim">{label}</span>
-            <span className={`text-sm font-bold ${cls || 'text-slate-200'}`}>
-              {val != null ? parseFloat(val).toFixed(1) : '—'}
-            </span>
-          </div>
-        );
-      })}
-    </div>
+    <Cell label="Tyres avg" value={allAvg != null ? allAvg.toFixed(1) : null} unit="bar"
+          bar={tpmsBar(allAvg)} barColor={tpmsColor(allAvg)} />
+  );
+
+  if (size === 'medium') return (
+    <CellRow>
+      <Cell label="Front avg" value={frontAvg != null ? frontAvg.toFixed(1) : null} unit="bar"
+            bar={tpmsBar(frontAvg)} barColor={tpmsColor(frontAvg)} />
+      <Cell label="Rear avg"  value={rearAvg  != null ? rearAvg.toFixed(1)  : null} unit="bar"
+            bar={tpmsBar(rearAvg)}  barColor={tpmsColor(rearAvg)} />
+    </CellRow>
   );
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-2">
-        {vals.map(({ label, val }) => <TpmsCell key={label} label={label} value={val} />)}
-      </div>
-      {size === 'large' && (
-        <p className={`text-xs text-center ${allOk ? 'text-success' : 'text-warning'}`}>
-          {allOk ? 'All pressures normal' : 'Check tyre pressure'}
-        </p>
-      )}
-      {size === 'medium' && allOk && (
-        <p className="text-xs text-success text-center">All pressures normal</p>
-      )}
+    <CellGrid2x2>
+      <Cell label="FL" value={fl != null ? fl.toFixed(1) : null} unit="bar" bar={tpmsBar(fl)} barColor={tpmsColor(fl)} />
+      <Cell label="FR" value={fr != null ? fr.toFixed(1) : null} unit="bar" bar={tpmsBar(fr)} barColor={tpmsColor(fr)} />
+      <Cell label="RL" value={rl != null ? rl.toFixed(1) : null} unit="bar" bar={tpmsBar(rl)} barColor={tpmsColor(rl)} />
+      <Cell label="RR" value={rr != null ? rr.toFixed(1) : null} unit="bar" bar={tpmsBar(rr)} barColor={tpmsColor(rr)} />
+    </CellGrid2x2>
+  );
+}
+
+function SkeletonCells({ size }) {
+  const n = size === 'small' ? 1 : size === 'large' ? 4 : 2;
+  return (
+    <div className={`grid gap-2 ${n > 1 ? 'grid-cols-2' : ''}`}>
+      {Array.from({ length: n }).map((_, i) => (
+        <div key={i} className="bg-muted rounded-lg min-h-[80px] animate-pulse" />
+      ))}
     </div>
   );
 }

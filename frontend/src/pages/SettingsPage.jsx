@@ -15,14 +15,14 @@ const TIMEZONES = [
 ];
 
 const WIDGET_META = {
-  battery:       { label: 'Battery & Range',    wide: false },
-  tpms:          { label: 'Tyre Pressures',     wide: false },
-  climate:       { label: 'Temperature',         wide: false },
-  last_charge:   { label: 'Last Charge',         wide: false },
-  month_stats:   { label: 'Monthly Stats',       wide: true  },
-  recent_drives: { label: 'Today & Yesterday',   wide: true  },
-  charge_cost:   { label: 'Charging Cost',       wide: true  },
-  links:         { label: 'Quick Links',         wide: false },
+  battery:             { label: 'Battery & Range',      wide: false },
+  tpms:                { label: 'Tyre Pressures',       wide: false },
+  climate:             { label: 'Temperature',           wide: false },
+  monthly_driving:     { label: 'Monthly Driving',      wide: true  },
+  monthly_consumption: { label: 'Monthly Consumption',  wide: true  },
+  recent_drives:       { label: 'Today & Yesterday',    wide: true  },
+  charge_cost:         { label: 'Charging Cost',        wide: true  },
+  links:               { label: 'Quick Links',          wide: false },
 };
 
 const SIZE_OPTIONS = [
@@ -44,13 +44,13 @@ export default function SettingsPage({ onClose }) {
   useEffect(() => {
     fetchSettings().then(s => { if (s.timezone) setTimezone(s.timezone); });
     fetchWidgetLayout(1).then(rows => {
-      if (rows.length) {
-        setLayout(rows.sort((a, b) => a.position - b.position));
-      } else {
-        setLayout(Object.keys(WIDGET_META).map((id, i) => ({
-          widget_id: id, position: i, enabled: 1, size: 'medium'
-        })));
-      }
+      const saved = rows.length ? rows.sort((a, b) => a.position - b.position) : [];
+      const savedIds = new Set(saved.map(w => w.widget_id));
+      const maxPos = saved.reduce((m, w) => Math.max(m, w.position), saved.length - 1);
+      const missing = Object.keys(WIDGET_META)
+        .filter(id => !savedIds.has(id))
+        .map((id, i) => ({ widget_id: id, position: maxPos + 1 + i, enabled: 1, size: 'medium' }));
+      setLayout([...saved, ...missing]);
     });
   }, []);
 

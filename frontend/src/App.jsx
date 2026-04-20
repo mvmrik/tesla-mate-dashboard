@@ -6,26 +6,26 @@ import StatusBar       from './components/StatusBar.jsx';
 import SettingsPage    from './pages/SettingsPage.jsx';
 import UpdateChecker   from './components/UpdateChecker.jsx';
 
-import BatteryWidget      from './components/widgets/BatteryWidget.jsx';
-import TpmsWidget         from './components/widgets/TpmsWidget.jsx';
-import ClimateWidget      from './components/widgets/ClimateWidget.jsx';
-import LastChargeWidget   from './components/widgets/LastChargeWidget.jsx';
-import MonthStatsWidget   from './components/widgets/MonthStatsWidget.jsx';
-import RecentDrivesWidget from './components/widgets/RecentDrivesWidget.jsx';
-import ChargeCostWidget   from './components/widgets/ChargeCostWidget.jsx';
-import LinksWidget        from './components/widgets/LinksWidget.jsx';
+import BatteryWidget            from './components/widgets/BatteryWidget.jsx';
+import TpmsWidget               from './components/widgets/TpmsWidget.jsx';
+import ClimateWidget            from './components/widgets/ClimateWidget.jsx';
+import MonthlyDrivingWidget     from './components/widgets/MonthlyDrivingWidget.jsx';
+import MonthlyConsumptionWidget from './components/widgets/MonthlyConsumptionWidget.jsx';
+import RecentDrivesWidget       from './components/widgets/RecentDrivesWidget.jsx';
+import ChargeCostWidget         from './components/widgets/ChargeCostWidget.jsx';
+import LinksWidget              from './components/widgets/LinksWidget.jsx';
 
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 
 const WIDGETS = {
-  battery:       { component: BatteryWidget,       title: 'Battery & Range' },
-  tpms:          { component: TpmsWidget,           title: 'Tyre Pressures', subtitle: 'bar' },
-  climate:       { component: ClimateWidget,        title: 'Temperature' },
-  last_charge:   { component: LastChargeWidget,     title: 'Last Charge' },
-  month_stats:   { component: MonthStatsWidget,     title: 'Monthly Stats',      wide: true },
-  recent_drives: { component: RecentDrivesWidget,   title: 'Today & Yesterday',  wide: true },
-  charge_cost:   { component: ChargeCostWidget,     title: 'Charging Cost',      wide: true, noData: true },
-  links:         { component: LinksWidget,          title: 'Quick Links',        noData: true },
+  battery:              { component: BatteryWidget,            title: 'Battery & Range'      },
+  tpms:                 { component: TpmsWidget,               title: 'Tyre Pressures', subtitle: 'bar' },
+  climate:              { component: ClimateWidget,            title: 'Temperature'          },
+  monthly_driving:      { component: MonthlyDrivingWidget,     title: 'Monthly Driving',     wide: true },
+  monthly_consumption:  { component: MonthlyConsumptionWidget, title: 'Monthly Consumption', wide: true },
+  recent_drives:        { component: RecentDrivesWidget,       title: 'Today & Yesterday',   wide: true },
+  charge_cost:          { component: ChargeCostWidget,         title: 'Charging Cost',       wide: true, noData: true },
+  links:                { component: LinksWidget,              title: 'Quick Links',         noData: true },
 };
 
 export default function App() {
@@ -50,8 +50,14 @@ export default function App() {
 
   const loadLayout = useCallback(() => {
     fetchWidgetLayout(1).then(rows => {
-      if (rows.length) setLayout(rows);
-      else setLayout(Object.keys(WIDGETS).map((id, i) => ({ widget_id: id, position: i, enabled: 1, size: 'medium' })));
+      const saved = rows.length ? rows : [];
+      const savedIds = new Set(saved.map(w => w.widget_id));
+      const maxPos = saved.reduce((m, w) => Math.max(m, w.position), saved.length - 1);
+      // Any widget in code but missing from saved layout → append it enabled by default
+      const missing = Object.keys(WIDGETS)
+        .filter(id => !savedIds.has(id))
+        .map((id, i) => ({ widget_id: id, position: maxPos + 1 + i, enabled: 1, size: 'medium' }));
+      setLayout([...saved, ...missing]);
     });
   }, []);
 

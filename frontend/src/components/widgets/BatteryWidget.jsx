@@ -1,60 +1,44 @@
 import React from 'react';
-import { batteryClass } from '../../lib/utils.js';
+import Cell, { CellRow, CellGrid2x2, batteryColor } from '../Cell.jsx';
 
-const COLOR = { success: '#22c55e', warning: '#f59e0b', danger: '#ef4444' };
-const TEXT  = { success: 'text-success', warning: 'text-warning', danger: 'text-danger' };
+export default function BatteryWidget({ data, size = 'medium' }) {
+  if (!data) return <SkeletonCells size={size} />;
 
-function Stat({ label, value }) {
+  const pct   = data.battery_level ?? 0;
+  const color = batteryColor(pct);
+  const bar   = pct;
+
+  if (size === 'small') return (
+    <Cell label="Battery" value={pct} unit="%" bar={bar} barColor={color} />
+  );
+
+  if (size === 'medium') return (
+    <CellRow>
+      <Cell label="Battery" value={pct} unit="%" bar={bar} barColor={color} />
+      <Cell label="Range"   value={data.rated_range_km} unit="km"
+            sub={data.est_range_km ? 'Est. ' + data.est_range_km + ' km' : null} />
+    </CellRow>
+  );
+
+  // large — M top row + last charge bottom row
   return (
-    <div>
-      <p className="text-[0.6rem] uppercase tracking-widest text-accent">{label}</p>
-      <p className="text-sm font-semibold text-slate-300">{value}</p>
-    </div>
+    <CellGrid2x2>
+      <Cell label="Battery" value={pct} unit="%" bar={bar} barColor={color} />
+      <Cell label="Range"   value={data.rated_range_km} unit="km"
+            sub={data.est_range_km ? 'Est. ' + data.est_range_km + ' km' : null} />
+      <Cell label="Last charge" value={data.last_charge_end_pct} unit="%" />
+      <Cell label="Last added"  value={data.last_charge_kwh}     unit="kWh" />
+    </CellGrid2x2>
   );
 }
 
-export default function BatteryWidget({ data, size = 'medium' }) {
-  if (!data) return <div className="h-16 bg-muted rounded animate-pulse" />;
-
-  const pct  = data.battery_level ?? 0;
-  const cls  = batteryClass(pct);
-  const fill = COLOR[cls];
-
-  if (size === 'small') return (
-    <div className="flex items-center gap-3">
-      <span className="text-3xl font-bold text-slate-100">{pct}%</span>
-      <div className="flex-1">
-        <div className="h-2 bg-muted rounded-full overflow-hidden border border-border">
-          <div className="h-full rounded-full transition-all" style={{ width: pct + '%', background: fill }} />
-        </div>
-        <p className={`text-xs mt-1 ${TEXT[cls]}`}>{data.rated_range_km ? data.rated_range_km + ' km' : '—'}</p>
-      </div>
-    </div>
-  );
-
+function SkeletonCells({ size }) {
+  const n = size === 'small' ? 1 : size === 'medium' ? 2 : 4;
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between">
-        <span className="text-4xl font-bold text-slate-100">{pct}<span className="text-xl ml-1">%</span></span>
-        <span className={`text-sm font-medium ${TEXT[cls]}`}>{data.rated_range_km ? data.rated_range_km + ' km' : '—'}</span>
-      </div>
-
-      <div className="h-2 bg-muted rounded-full overflow-hidden border border-border">
-        <div className="h-full rounded-full transition-all duration-700" style={{ width: pct + '%', background: fill }} />
-      </div>
-
-      {size === 'large' && data.usable_battery_level != null && data.usable_battery_level !== pct && (
-        <p className="text-xs text-dim">Usable: <span className="text-faint">{data.usable_battery_level}%</span></p>
-      )}
-
-      <div className="grid grid-cols-2 gap-2 pt-1">
-        <Stat label="Est. range" value={data.est_range_km ? data.est_range_km + ' km' : '—'} />
-        <Stat label="Odometer"   value={data.odometer_km  ? data.odometer_km  + ' km' : '—'} />
-        {size === 'large' && <>
-          <Stat label="State"  value={data.state ?? '—'} />
-          <Stat label="Usable" value={data.usable_battery_level != null ? data.usable_battery_level + '%' : '—'} />
-        </>}
-      </div>
+    <div className={`grid gap-2 ${n > 1 ? 'grid-cols-2' : ''}`}>
+      {Array.from({ length: n }).map((_, i) => (
+        <div key={i} className="bg-muted rounded-lg min-h-[80px] animate-pulse" />
+      ))}
     </div>
   );
 }

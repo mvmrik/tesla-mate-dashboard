@@ -1,53 +1,36 @@
 import React from 'react';
+import Cell, { CellRow, tempColor, tempBar } from '../Cell.jsx';
 
-function TempBar({ value, min = -20, max = 50 }) {
-  if (value == null) return null;
-  const pct = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
-  const color = value < 5 ? '#60a5fa' : value > 30 ? '#ef4444' : '#22c55e';
+export default function ClimateWidget({ data, size = 'medium' }) {
+  if (!data) return <SkeletonCells size={size} />;
+
+  const out       = data.outside_temp;
+  const inn       = data.inside_temp;
+  const climateOn = data.is_climate_on;
+
+  if (size === 'small') return (
+    <Cell label="Outside" value={out != null ? out + '°' : null}
+          bar={tempBar(out)} barColor={tempColor(out)} />
+  );
+
+  // medium and large both show outside + inside
   return (
-    <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-1">
-      <div className="h-full rounded-full transition-all" style={{ width: pct + '%', background: color }} />
-    </div>
+    <CellRow>
+      <Cell label="Outside" value={out != null ? out + '°' : null}
+            bar={tempBar(out)} barColor={tempColor(out)} />
+      <Cell label={climateOn ? 'Inside ❄' : 'Inside'} value={inn != null ? inn + '°' : null}
+            bar={tempBar(inn)} barColor={tempColor(inn)} />
+    </CellRow>
   );
 }
 
-export default function ClimateWidget({ data, size = 'medium' }) {
-  if (!data) return <div className="h-16 bg-muted rounded animate-pulse" />;
-
-  if (size === 'small') return (
-    <div className="flex items-center gap-4">
-      <div>
-        <p className="text-[0.6rem] text-dim">Out</p>
-        <p className="text-xl font-bold text-slate-100">{data.outside_temp != null ? data.outside_temp + '°' : '—'}</p>
-      </div>
-      <div>
-        <p className="text-[0.6rem] text-dim">In {data.is_climate_on && <span className="text-hi">❄</span>}</p>
-        <p className="text-xl font-bold text-slate-100">{data.inside_temp != null ? data.inside_temp + '°' : '—'}</p>
-      </div>
-    </div>
-  );
-
+function SkeletonCells({ size }) {
+  const n = size === 'small' ? 1 : 2;
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-muted rounded-lg p-3">
-          <p className="text-[0.6rem] uppercase tracking-widest text-accent mb-1">Outside</p>
-          <p className="text-2xl font-bold text-slate-100">{data.outside_temp != null ? data.outside_temp + '°' : '—'}</p>
-          {size === 'large' && <TempBar value={data.outside_temp} />}
-        </div>
-        <div className="bg-muted rounded-lg p-3">
-          <p className="text-[0.6rem] uppercase tracking-widest text-accent mb-1">
-            Inside {data.is_climate_on && <span className="text-hi">❄</span>}
-          </p>
-          <p className="text-2xl font-bold text-slate-100">{data.inside_temp != null ? data.inside_temp + '°' : '—'}</p>
-          {size === 'large' && <TempBar value={data.inside_temp} />}
-        </div>
-      </div>
-      {size === 'large' && data.is_climate_on && (
-        <div className="flex items-center gap-2 text-hi text-sm">
-          <span>❄</span><span>Climate control is active</span>
-        </div>
-      )}
+    <div className={`grid gap-2 ${n > 1 ? 'grid-cols-2' : ''}`}>
+      {Array.from({ length: n }).map((_, i) => (
+        <div key={i} className="bg-muted rounded-lg min-h-[80px] animate-pulse" />
+      ))}
     </div>
   );
 }

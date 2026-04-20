@@ -64,6 +64,22 @@ router.get('/:carId/data', async (req, res) => {
          WHERE car_id = $2
            AND start_date >= date_trunc('month', NOW())
         )                                           AS total_kwh,
+        (SELECT COUNT(*)
+         FROM charging_processes
+         WHERE car_id = $3
+           AND start_date >= date_trunc('month', NOW())
+           AND end_date IS NOT NULL
+        )                                           AS charge_count,
+        (SELECT ROUND(AVG(
+           CASE WHEN duration_min > 0
+             THEN charge_energy_added / (duration_min / 60.0)
+             ELSE NULL END
+         )::numeric, 1)
+         FROM charging_processes
+         WHERE car_id = $4
+           AND start_date >= date_trunc('month', NOW())
+           AND end_date IS NOT NULL
+        )                                           AS avg_charge_kw,
         CASE WHEN SUM(d.distance) > 0
           THEN ROUND(
             (SUM((d.start_rated_range_km - d.end_rated_range_km) * c.efficiency) / SUM(d.distance) * 100)::numeric
@@ -79,7 +95,7 @@ router.get('/:carId/data', async (req, res) => {
       WHERE d.car_id = $1
         AND d.start_date >= date_trunc('month', NOW())
         AND d.distance > 0.5
-    `, [carId, carId]);
+    `, [carId, carId, carId, carId]);
 
     const { rows: lastDrives } = await pool.query(`
       SELECT

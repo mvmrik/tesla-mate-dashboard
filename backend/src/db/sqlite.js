@@ -61,16 +61,21 @@ function migrate(db) {
     );
   `);
 
-  // Seed default widget layout if empty
-  const count = db.prepare('SELECT COUNT(*) as c FROM widget_layout').get();
-  if (count.c === 0) {
-    const defaults = [
-      'battery', 'tpms', 'climate', 'last_charge',
-      'month_stats', 'recent_drives', 'charge_cost'
-    ];
-    const ins = db.prepare(
-      'INSERT OR IGNORE INTO widget_layout (car_id, widget_id, position, enabled) VALUES (1, ?, ?, 1)'
-    );
-    defaults.forEach((id, i) => ins.run(id, i));
+  // All known widgets — new ones get added automatically if missing
+  const ALL_WIDGETS = [
+    'battery', 'tpms', 'climate',
+    'monthly_driving', 'monthly_consumption',
+    'recent_drives', 'charge_cost', 'links'
+  ];
+
+  const ins = db.prepare(
+    'INSERT OR IGNORE INTO widget_layout (car_id, widget_id, position, enabled) VALUES (1, ?, ?, 1)'
+  );
+  // Find highest existing position
+  const maxPos = db.prepare('SELECT COALESCE(MAX(position), -1) as m FROM widget_layout WHERE car_id = 1').get().m;
+  let pos = maxPos + 1;
+  for (const id of ALL_WIDGETS) {
+    const exists = db.prepare('SELECT 1 FROM widget_layout WHERE car_id = 1 AND widget_id = ?').get(id);
+    if (!exists) ins.run(id, pos++);
   }
 }
