@@ -15,8 +15,7 @@ export default function BatteryWidget({ data, size = 'medium' }) {
   if (size === 'medium') return (
     <CellRow>
       <Cell label="Battery" value={pct} unit="%" bar={bar} barColor={color} />
-      <Cell label="Range"   value={data.rated_range_km} unit="km"
-            sub={data.est_range_km ? 'Est. ' + data.est_range_km + ' km' : null} />
+      <Cell label="Range"   value={data.rated_range_km} unit="km" />
     </CellRow>
   );
 
@@ -24,8 +23,7 @@ export default function BatteryWidget({ data, size = 'medium' }) {
   return (
     <CellGrid2x2>
       <Cell label="Battery" value={pct} unit="%" bar={bar} barColor={color} />
-      <Cell label="Range"   value={data.rated_range_km} unit="km"
-            sub={data.est_range_km ? 'Est. ' + data.est_range_km + ' km' : null} />
+      <Cell label="Range"   value={data.rated_range_km} unit="km" />
       <Cell label="Last charge" value={data.last_charge_end_pct} unit="%" />
       <Cell label="Last added"  value={data.last_charge_kwh}     unit="kWh" />
     </CellGrid2x2>

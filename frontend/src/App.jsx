@@ -14,6 +14,7 @@ import MonthlyConsumptionWidget from './components/widgets/MonthlyConsumptionWid
 import RecentDrivesWidget       from './components/widgets/RecentDrivesWidget.jsx';
 import ChargeCostWidget         from './components/widgets/ChargeCostWidget.jsx';
 import LinksWidget              from './components/widgets/LinksWidget.jsx';
+import StatesWidget             from './components/widgets/StatesWidget.jsx';
 
 const VERSION = '1.4.0';
 
@@ -26,6 +27,7 @@ const WIDGETS = {
   recent_drives:        { component: RecentDrivesWidget,       title: 'Today & Yesterday',   wide: true },
   charge_cost:          { component: ChargeCostWidget,         title: 'Charging Cost',       wide: true, noData: true },
   links:                { component: LinksWidget,              title: 'Quick Links',         noData: true },
+  states:               { component: StatesWidget,             title: 'Car States',           noData: true },
 };
 
 export default function App() {

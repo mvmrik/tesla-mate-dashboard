@@ -65,7 +65,7 @@ function migrate(db) {
   const ALL_WIDGETS = [
     'battery', 'tpms', 'climate',
     'monthly_driving', 'monthly_consumption',
-    'recent_drives', 'charge_cost', 'links'
+    'recent_drives', 'charge_cost', 'links', 'states'
   ];
 
   const ins = db.prepare(

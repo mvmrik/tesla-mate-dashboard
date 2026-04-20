@@ -135,4 +135,23 @@ router.get('/:carId/data', async (req, res) => {
   }
 });
 
+router.get('/:carId/states', async (req, res) => {
+  const carId = parseInt(req.params.carId) || 1;
+  const hours = Math.min(parseInt(req.query.hours) || 48, 168);
+  try {
+    const pool = getPool();
+    const { rows } = await pool.query(`
+      SELECT state, start_date, end_date
+      FROM states
+      WHERE car_id = $1
+        AND (end_date IS NULL OR end_date >= NOW() - ($2::int * interval '1 hour'))
+        AND start_date <= NOW()
+      ORDER BY start_date
+    `, [carId, hours]);
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;

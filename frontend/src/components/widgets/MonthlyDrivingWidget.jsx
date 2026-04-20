@@ -8,9 +8,12 @@ export default function MonthlyDrivingWidget({ data, size = 'medium' }) {
   if (!ms || !ms.total_km) return <p className="text-sm text-dim">No drives this month yet</p>;
 
   const totalMin = parseInt(ms.total_min || 0);
-  const timeStr  = totalMin >= 60
-    ? Math.floor(totalMin / 60) + 'h' + (totalMin % 60) + 'm'
-    : totalMin + 'min';
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  const dim = (s) => <span className="text-sm font-normal text-dim ml-0.5">{s}</span>;
+  const timeValue = totalMin < 60
+    ? <>{totalMin}{dim('min')}</>
+    : <>{h}{dim('h')}{m > 0 && <>{m}{dim('m')}</>}</>;
 
   if (size === 'small') return (
     <Cell label="Distance" value={ms.total_km} unit="km" />
@@ -28,7 +31,7 @@ export default function MonthlyDrivingWidget({ data, size = 'medium' }) {
       <Cell label="Distance"   value={ms.total_km}      unit="km"   />
       <Cell label="Avg speed"  value={ms.avg_speed_kmh} unit="km/h" />
       <Cell label="Drives"     value={ms.drives_count}              />
-      <Cell label="Drive time" value={timeStr}                      />
+      <Cell label="Drive time" value={timeValue}                    />
     </CellGrid2x2>
   );
 }

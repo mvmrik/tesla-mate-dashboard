@@ -23,6 +23,7 @@ const WIDGET_META = {
   recent_drives:       { label: 'Today & Yesterday',   wide: true  },
   charge_cost:         { label: 'Charging Cost',       wide: true  },
   links:               { label: 'Quick Links',         wide: false },
+  states:              { label: 'Car States',          wide: false },
 };
 
 const SIZE_OPTIONS = [

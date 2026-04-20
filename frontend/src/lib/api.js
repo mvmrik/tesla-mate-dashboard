@@ -6,6 +6,12 @@ export async function fetchCarData(carId = 1) {
   return r.json();
 }
 
+export async function fetchCarStates(carId = 1, hours = 48) {
+  const r = await fetch(`${BASE}/car/${carId}/states?hours=${hours}`);
+  if (!r.ok) return [];
+  return r.json();
+}
+
 export async function fetchHealth() {
   const r = await fetch(`${BASE}/health`);
   return r.json();
