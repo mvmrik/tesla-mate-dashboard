@@ -12,7 +12,6 @@ const STATE_CONFIG = {
   updating:  { label: 'Updating',  color: '#84cc16' },
 };
 
-// Lower number = higher priority (driving wins over online)
 const PRIORITY = { driving: 0, charging: 1, updating: 1, asleep: 2, sleeping: 2, online: 3, suspended: 4, offline: 5 };
 
 function cfg(state) {
@@ -20,7 +19,6 @@ function cfg(state) {
 }
 
 function normalise(states, winStart, winEnd) {
-  // Clip each segment to the window
   const segs = states
     .map(s => ({
       state: s.state,
@@ -29,7 +27,6 @@ function normalise(states, winStart, winEnd) {
     }))
     .filter(s => s.start < winEnd && s.end > winStart && s.end > s.start);
 
-  // Collect all boundary timestamps, then for each interval pick highest-priority state
   const pts = new Set([winStart, winEnd]);
   segs.forEach(s => { pts.add(s.start); pts.add(s.end); });
   const boundaries = [...pts].sort((a, b) => a - b);
@@ -57,6 +54,14 @@ function normalise(states, winStart, winEnd) {
 function fmtTime(ts) {
   return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
+function fmtDateTime(ts) {
+  const d = new Date(ts);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate()-1);
+  const day = new Date(ts); day.setHours(0,0,0,0);
+  const prefix = day >= today ? '' : day >= yesterday ? 'Yesterday ' : fmtDate(ts) + ' ';
+  return prefix + fmtTime(ts);
+}
 function fmtDate(ts) {
   return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
@@ -67,17 +72,19 @@ function fmtDur(ms) {
   return h + 'h' + (m ? m + 'm' : '');
 }
 
-function TimelineBar({ states, winStart, winEnd, label, onSegmentClick }) {
+function TimelineBar({ segs, winStart, winEnd, label, onSegmentClick, onLabelClick }) {
   const total = winEnd - winStart;
-  const segs  = normalise(states, winStart, winEnd);
-
   return (
     <div className="bg-muted rounded-lg p-3 flex flex-col justify-between min-h-[80px] flex-1">
       <div className="flex justify-between text-[0.55rem] text-dim mb-2">
-        <span className="text-[0.6rem] uppercase tracking-widest text-accent font-semibold">{label}</span>
+        <button onClick={onLabelClick}
+                className="text-[0.6rem] uppercase tracking-widest text-accent font-semibold hover:text-hi transition-colors">
+          {label} ↗
+        </button>
         <span>{winEnd >= Date.now() - 60000 ? 'now' : fmtTime(winEnd)}</span>
       </div>
-      <div className="w-full rounded-md overflow-hidden flex mt-auto" style={{ height: '1.4rem', background: '#0f172a' }}>
+      <div className="w-full rounded-md overflow-hidden flex mt-auto"
+           style={{ height: '1.4rem', background: '#0f172a' }}>
         {segs.map((seg, i) => {
           const w = Math.max(0.3, (seg.end - seg.start) / total * 100);
           return (
@@ -93,7 +100,7 @@ function TimelineBar({ states, winStart, winEnd, label, onSegmentClick }) {
   );
 }
 
-function StateModal({ seg, onClose }) {
+function SegmentModal({ seg, onClose }) {
   const c = cfg(seg.state);
   const isNow = seg.end >= Date.now() - 60000;
   return (
@@ -104,19 +111,16 @@ function StateModal({ seg, onClose }) {
         <div className="flex items-center gap-2 mb-4">
           <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: c.color }} />
           <span className="font-semibold text-slate-100">{c.label}</span>
-          <button onClick={onClose}
-                  className="ml-auto text-dim hover:text-slate-300 text-lg leading-none">✕</button>
+          <button onClick={onClose} className="ml-auto text-dim hover:text-slate-300 text-lg leading-none">✕</button>
         </div>
         <div className="flex flex-col gap-2.5 text-sm">
           <div className="flex justify-between gap-4">
             <span className="text-dim">From</span>
-            <span className="text-slate-200">{fmtDate(seg.start)} {fmtTime(seg.start)}</span>
+            <span className="text-slate-200">{fmtDateTime(seg.start)}</span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-dim">To</span>
-            <span className="text-slate-200">
-              {isNow ? 'now' : fmtDate(seg.end) + ' ' + fmtTime(seg.end)}
-            </span>
+            <span className="text-slate-200">{isNow ? 'now' : fmtDateTime(seg.end)}</span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-dim">Duration</span>
@@ -128,9 +132,43 @@ function StateModal({ seg, onClose }) {
   );
 }
 
+function ListModal({ segs, label, onClose }) {
+  const isNow = (ts) => ts >= Date.now() - 60000;
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+         onClick={onClose}>
+      <div className="bg-surface border border-border rounded-xl w-full max-w-sm max-h-[80vh] flex flex-col"
+           onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 pb-3 border-b border-border">
+          <span className="font-semibold text-slate-100">{label}</span>
+          <button onClick={onClose} className="text-dim hover:text-slate-300 text-lg leading-none">✕</button>
+        </div>
+        <div className="overflow-y-auto flex-1 p-3">
+          <div className="flex flex-col gap-1">
+            {segs.map((seg, i) => {
+              const c = cfg(seg.state);
+              return (
+                <div key={i} className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-muted/60">
+                  <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: c.color }} />
+                  <span className="text-xs text-dim w-28 flex-shrink-0">
+                    {fmtTime(seg.start)} → {isNow(seg.end) ? 'now' : fmtTime(seg.end)}
+                  </span>
+                  <span className="text-sm text-slate-200 flex-1">{c.label}</span>
+                  <span className="text-xs text-dim">{fmtDur(seg.end - seg.start)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function StatesWidget({ size = 'medium' }) {
   const [states,   setStates]   = useState(null);
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState(null); // single segment modal
+  const [listFor,  setListFor]  = useState(null); // { segs, label } for list modal
 
   useEffect(() => {
     const hours = size === 'small' ? 12 : 48;
@@ -143,31 +181,32 @@ export default function StatesWidget({ size = 'medium' }) {
   const h48ago = now - 48 * 3600000;
 
   if (states === null) return (
-    <div className={`grid gap-2 ${size === 'large' ? 'grid-cols-1' : ''}`}>
+    <div className="flex flex-col gap-2">
       <div className="bg-muted rounded-lg min-h-[80px] animate-pulse" />
       {size === 'large' && <div className="bg-muted rounded-lg min-h-[80px] animate-pulse" />}
     </div>
   );
 
+  const bars = size === 'small'
+    ? [{ winStart: h12ago, winEnd: now,    label: 'Last 12h' }]
+    : size === 'medium'
+    ? [{ winStart: h24ago, winEnd: now,    label: 'Last 24h' }]
+    : [{ winStart: h24ago, winEnd: now,    label: 'Last 24h' },
+       { winStart: h48ago, winEnd: h24ago, label: 'Previous 24h' }];
+
   return (
     <div className="flex flex-col gap-2 h-full">
-      {size === 'small' && (
-        <TimelineBar states={states} winStart={h12ago} winEnd={now}
-                     label="Last 12h" onSegmentClick={setSelected} />
-      )}
-      {size === 'medium' && (
-        <TimelineBar states={states} winStart={h24ago} winEnd={now}
-                     label="Last 24h" onSegmentClick={setSelected} />
-      )}
-      {size === 'large' && (
-        <>
-          <TimelineBar states={states} winStart={h24ago} winEnd={now}
-                       label="Last 24h" onSegmentClick={setSelected} />
-          <TimelineBar states={states} winStart={h48ago} winEnd={h24ago}
-                       label="Previous 24h" onSegmentClick={setSelected} />
-        </>
-      )}
-      {selected && <StateModal seg={selected} onClose={() => setSelected(null)} />}
+      {bars.map(({ winStart, winEnd, label }) => {
+        const segs = normalise(states, winStart, winEnd);
+        return (
+          <TimelineBar key={label} segs={segs} winStart={winStart} winEnd={winEnd}
+                       label={label}
+                       onSegmentClick={setSelected}
+                       onLabelClick={() => setListFor({ segs, label })} />
+        );
+      })}
+      {selected && <SegmentModal seg={selected} onClose={() => setSelected(null)} />}
+      {listFor  && <ListModal segs={listFor.segs} label={listFor.label} onClose={() => setListFor(null)} />}
     </div>
   );
 }
