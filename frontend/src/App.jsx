@@ -94,7 +94,7 @@ export default function App() {
         <UpdateChecker />
 
         {/* Widget grid — 2 cols mobile, 4 cols tablet, 6 cols desktop */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 items-start">
           {visibleWidgets.map(({ widget_id, meta, size }) => {
             const Component = meta.component;
             const sz = size || 'medium';

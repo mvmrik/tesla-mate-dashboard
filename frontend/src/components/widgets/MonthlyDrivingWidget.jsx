@@ -9,7 +9,7 @@ export default function MonthlyDrivingWidget({ data, size = 'medium' }) {
 
   const totalMin = parseInt(ms.total_min || 0);
   const timeStr  = totalMin >= 60
-    ? Math.floor(totalMin / 60) + 'h ' + (totalMin % 60) + 'min'
+    ? Math.floor(totalMin / 60) + 'h' + (totalMin % 60) + 'm'
     : totalMin + 'min';
 
   if (size === 'small') return (
