@@ -19,10 +19,10 @@ const VERSION = '1.4.0';
 
 const WIDGETS = {
   battery:              { component: BatteryWidget,            title: 'Battery & Range'      },
-  tpms:                 { component: TpmsWidget,               title: 'Tyre Pressures', subtitle: 'bar' },
+  tpms:                 { component: TpmsWidget,               title: 'Tyre Pressures'       },
   climate:              { component: ClimateWidget,            title: 'Temperature'          },
-  monthly_driving:      { component: MonthlyDrivingWidget,     title: 'Monthly Driving',     wide: true },
-  monthly_consumption:  { component: MonthlyConsumptionWidget, title: 'Monthly Consumption', wide: true },
+  monthly_driving:      { component: MonthlyDrivingWidget,     title: 'Monthly Driving'      },
+  monthly_consumption:  { component: MonthlyConsumptionWidget, title: 'Monthly Consumption'  },
   recent_drives:        { component: RecentDrivesWidget,       title: 'Today & Yesterday',   wide: true },
   charge_cost:          { component: ChargeCostWidget,         title: 'Charging Cost',       wide: true, noData: true },
   links:                { component: LinksWidget,              title: 'Quick Links',         noData: true },
@@ -93,14 +93,19 @@ export default function App() {
         <StatusBar data={carData} loading={loading} onRefresh={refresh} dbOk={dbOk} />
         <UpdateChecker />
 
-        {/* Widget grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Widget grid — 2 cols mobile, 4 cols tablet, 6 cols desktop */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
           {visibleWidgets.map(({ widget_id, meta, size }) => {
             const Component = meta.component;
-            const wide = meta.wide || false;
+            const sz = size || 'medium';
+            const colSpan = meta.wide
+              ? 'col-span-full'
+              : sz === 'small'
+                ? 'col-span-1'
+                : 'col-span-2';
             return (
-              <WidgetCard key={widget_id} title={meta.title} subtitle={meta.subtitle} wide={wide}>
-                <Component data={meta.noData ? undefined : carData} size={size || 'medium'} />
+              <WidgetCard key={widget_id} title={meta.title} colSpan={colSpan}>
+                <Component data={meta.noData ? undefined : carData} size={sz} />
               </WidgetCard>
             );
           })}

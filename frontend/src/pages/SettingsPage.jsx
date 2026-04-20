@@ -15,14 +15,14 @@ const TIMEZONES = [
 ];
 
 const WIDGET_META = {
-  battery:             { label: 'Battery & Range',      wide: false },
-  tpms:                { label: 'Tyre Pressures',       wide: false },
-  climate:             { label: 'Temperature',           wide: false },
-  monthly_driving:     { label: 'Monthly Driving',      wide: true  },
-  monthly_consumption: { label: 'Monthly Consumption',  wide: true  },
-  recent_drives:       { label: 'Today & Yesterday',    wide: true  },
-  charge_cost:         { label: 'Charging Cost',        wide: true  },
-  links:               { label: 'Quick Links',          wide: false },
+  battery:             { label: 'Battery & Range',     wide: false },
+  tpms:                { label: 'Tyre Pressures',      wide: false },
+  climate:             { label: 'Temperature',          wide: false, sizes: ['small', 'medium'] },
+  monthly_driving:     { label: 'Monthly Driving',     wide: false },
+  monthly_consumption: { label: 'Monthly Consumption', wide: false },
+  recent_drives:       { label: 'Today & Yesterday',   wide: true  },
+  charge_cost:         { label: 'Charging Cost',       wide: true  },
+  links:               { label: 'Quick Links',         wide: false },
 };
 
 const SIZE_OPTIONS = [
@@ -163,7 +163,7 @@ export default function SettingsPage({ onClose }) {
 
                   {/* Size */}
                   <div className="flex gap-1">
-                    {SIZE_OPTIONS.map(s => (
+                    {SIZE_OPTIONS.filter(s => !meta.sizes || meta.sizes.includes(s.value)).map(s => (
                       <button key={s.value} title={s.title}
                               onClick={() => setSize(w.widget_id, s.value)}
                               disabled={!w.enabled}
