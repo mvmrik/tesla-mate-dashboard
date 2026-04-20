@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
-const CURRENT = '1.4.0';
-const REPO    = 'mvmrik/tesla-mate-dashboard';
+const CURRENT = '1.5.0';
+const VERSION_URL = 'https://raw.githubusercontent.com/mvmrik/tesla-mate-dashboard/main/VERSION';
 
 function semverGt(a, b) {
-  const pa = a.replace(/^v/, '').split('.').map(Number);
-  const pb = b.replace(/^v/, '').split('.').map(Number);
+  const pa = a.trim().replace(/^v/, '').split('.').map(Number);
+  const pb = b.trim().replace(/^v/, '').split('.').map(Number);
   for (let i = 0; i < 3; i++) {
     if ((pa[i] || 0) > (pb[i] || 0)) return true;
     if ((pa[i] || 0) < (pb[i] || 0)) return false;
@@ -20,11 +20,9 @@ export default function UpdateChecker() {
   const [dismissed, setDismiss] = useState(false);
 
   useEffect(() => {
-    fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
-      headers: { Accept: 'application/vnd.github+json' }
-    })
-      .then(r => r.json())
-      .then(d => { if (d.tag_name) setLatest(d.tag_name); })
+    fetch(VERSION_URL)
+      .then(r => r.text())
+      .then(v => { if (v.trim()) setLatest(v.trim()); })
       .catch(() => {});
   }, []);
 
@@ -35,10 +33,8 @@ export default function UpdateChecker() {
     try {
       await fetch('/api/update', { method: 'POST' });
       setDone(true);
-      // Page will reload when container restarts
       setTimeout(() => window.location.reload(), 8000);
     } catch {
-      // Auto-update not supported — just show instructions
       setDone('manual');
     } finally {
       setUpdating(false);
@@ -63,10 +59,6 @@ export default function UpdateChecker() {
                   className="text-xs bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 px-3 py-1 rounded-md disabled:opacity-50 whitespace-nowrap">
             {updating ? 'Updating...' : '⬆ Update now'}
           </button>
-          <a href={`https://github.com/${REPO}/releases/latest`} target="_blank" rel="noopener"
-             className="text-xs text-dim hover:text-slate-300 whitespace-nowrap">
-            Release notes →
-          </a>
         </>
       )}
       <button onClick={() => setDismiss(true)} className="text-dim hover:text-slate-300 text-sm">✕</button>

@@ -16,7 +16,7 @@ import ChargeCostWidget         from './components/widgets/ChargeCostWidget.jsx'
 import LinksWidget              from './components/widgets/LinksWidget.jsx';
 import StatesWidget             from './components/widgets/StatesWidget.jsx';
 
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 
 const WIDGETS = {
   battery:              { component: BatteryWidget,            title: 'Battery & Range'      },

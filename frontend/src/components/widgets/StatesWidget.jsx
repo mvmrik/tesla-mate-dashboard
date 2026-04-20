@@ -17,23 +17,25 @@ function cfg(state) {
 }
 
 function normalise(states, winStart, winEnd) {
+  const sorted = [...states].sort((a, b) =>
+    new Date(a.start_date) - new Date(b.start_date));
+
   const result = [];
   let cursor = winStart;
 
-  for (const s of states) {
+  for (const s of sorted) {
     const start = Math.max(new Date(s.start_date).getTime(), winStart);
     const end   = s.end_date
       ? Math.min(new Date(s.end_date).getTime(), winEnd)
       : winEnd;
 
-    if (start >= winEnd) break;
-    if (end   <= winStart) continue;
+    if (start >= winEnd || end <= winStart) continue;
 
     if (start > cursor) {
       result.push({ state: 'offline', start: cursor, end: start });
     }
-    if (end > start) {
-      result.push({ state: s.state, start, end });
+    if (end > Math.max(start, cursor)) {
+      result.push({ state: s.state, start: Math.max(start, cursor), end });
     }
     cursor = Math.max(cursor, end);
   }
@@ -62,41 +64,23 @@ function TimelineBar({ states, winStart, winEnd, label, onSegmentClick }) {
   const segs  = normalise(states, winStart, winEnd);
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex justify-between text-[0.55rem] text-dim">
-        <span>{label}</span>
+    <div className="bg-muted rounded-lg p-3 flex flex-col justify-between min-h-[80px]">
+      <div className="flex justify-between text-[0.55rem] text-dim mb-2">
+        <span className="text-[0.6rem] uppercase tracking-widest text-accent font-semibold">{label}</span>
         <span>{winEnd >= Date.now() - 60000 ? 'now' : fmtTime(winEnd)}</span>
       </div>
-      <div className="w-full h-5 rounded-md overflow-hidden flex" style={{ background: '#1e293b' }}>
+      <div className="w-full h-6 rounded-md overflow-hidden flex mt-auto" style={{ background: '#0f172a' }}>
         {segs.map((seg, i) => {
           const w = Math.max(0.3, (seg.end - seg.start) / total * 100);
           return (
             <div key={i}
                  style={{ width: w + '%', background: cfg(seg.state).color, flexShrink: 0 }}
-                 className="h-full cursor-pointer transition-all hover:brightness-125"
+                 className="h-full cursor-pointer hover:brightness-125 transition-all"
                  onClick={() => onSegmentClick(seg)} />
           );
         })}
       </div>
-    </div>
-  );
-}
-
-function Legend() {
-  const entries = [
-    ['driving',  'Driving'],
-    ['charging', 'Charging'],
-    ['asleep',   'Asleep'],
-    ['online',   'Online'],
-  ];
-  return (
-    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
-      {entries.map(([state, label]) => (
-        <div key={state} className="flex items-center gap-1">
-          <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: cfg(state).color }} />
-          <span className="text-[0.55rem] text-dim">{label}</span>
-        </div>
-      ))}
+      <div className="h-1.5 mt-1.5" />
     </div>
   );
 }
@@ -145,27 +129,27 @@ export default function StatesWidget({ size = 'medium' }) {
     fetchCarStates(1, hours).then(setStates).catch(() => setStates([]));
   }, [size]);
 
-  if (states === null) return (
-    <div className="flex flex-col gap-2">
-      <div className="h-5 bg-muted rounded-md animate-pulse" />
-      {size === 'large' && <div className="h-5 bg-muted rounded-md animate-pulse" />}
-    </div>
-  );
-
   const now    = Date.now();
   const h12ago = now - 12 * 3600000;
   const h24ago = now - 24 * 3600000;
   const h48ago = now - 48 * 3600000;
 
+  if (states === null) return (
+    <div className={`grid gap-2 ${size === 'large' ? 'grid-cols-1' : ''}`}>
+      <div className="bg-muted rounded-lg min-h-[80px] animate-pulse" />
+      {size === 'large' && <div className="bg-muted rounded-lg min-h-[80px] animate-pulse" />}
+    </div>
+  );
+
   return (
-    <div className="flex flex-col gap-3">
+    <div className={`flex flex-col gap-2`}>
       {size === 'small' && (
         <TimelineBar states={states} winStart={h12ago} winEnd={now}
-                     label="12h ago" onSegmentClick={setSelected} />
+                     label="Last 12h" onSegmentClick={setSelected} />
       )}
       {size === 'medium' && (
         <TimelineBar states={states} winStart={h24ago} winEnd={now}
-                     label="24h ago" onSegmentClick={setSelected} />
+                     label="Last 24h" onSegmentClick={setSelected} />
       )}
       {size === 'large' && (
         <>
@@ -175,7 +159,6 @@ export default function StatesWidget({ size = 'medium' }) {
                        label="Previous 24h" onSegmentClick={setSelected} />
         </>
       )}
-      <Legend />
       {selected && <StateModal seg={selected} onClose={() => setSelected(null)} />}
     </div>
   );
