@@ -20,8 +20,7 @@ export default function StatusBar({ data, loading, onRefresh, dbOk }) {
   let chargingInfo = null;
   if (state === 'charging' && data) {
     const parts = [];
-    if (data.outside_temp != null) parts.push(data.outside_temp + '°');
-    if (data.charger_power  != null) parts.push(data.charger_power + ' kW');
+    if (data.charger_power          != null) parts.push(data.charger_power + ' kW');
     if (data.charger_actual_current != null) parts.push(data.charger_actual_current + ' A');
     if (parts.length) chargingInfo = parts.join(' · ');
   }
