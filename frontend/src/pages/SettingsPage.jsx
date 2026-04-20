@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { fetchSettings, saveSettings, fetchWidgetLayout, saveWidgetLayout } from '../lib/api.js';
 
 const TIMEZONES = [
@@ -31,48 +31,71 @@ const SIZE_OPTIONS = [
 ];
 
 export default function SettingsPage({ onClose }) {
-  const [timezone, setTimezone]   = useState('UTC');
-  const [layout, setLayout]       = useState([]);
-  const [saving, setSaving]       = useState(false);
-  const [saved, setSaved]         = useState(false);
+  const [timezone, setTimezone] = useState('UTC');
+  const [layout, setLayout]     = useState([]);
+  const [saving, setSaving]     = useState(false);
+  const [saved, setSaved]       = useState(false);
+
+  // Drag state
+  const dragIdx  = useRef(null);
+  const dragOver = useRef(null);
 
   useEffect(() => {
     fetchSettings().then(s => { if (s.timezone) setTimezone(s.timezone); });
     fetchWidgetLayout(1).then(rows => {
-      if (rows.length) setLayout(rows);
-      else setLayout(Object.keys(WIDGET_META).map((id, i) => ({
-        widget_id: id, position: i, enabled: 1, size: 'medium'
-      })));
+      if (rows.length) {
+        setLayout(rows.sort((a, b) => a.position - b.position));
+      } else {
+        setLayout(Object.keys(WIDGET_META).map((id, i) => ({
+          widget_id: id, position: i, enabled: 1, size: 'medium'
+        })));
+      }
     });
   }, []);
 
-  const toggleWidget = (widget_id) => {
-    setLayout(prev => prev.map(w =>
-      w.widget_id === widget_id ? { ...w, enabled: w.enabled ? 0 : 1 } : w
-    ));
+  const toggleWidget = (widget_id) =>
+    setLayout(prev => prev.map(w => w.widget_id === widget_id ? { ...w, enabled: w.enabled ? 0 : 1 } : w));
+
+  const setSize = (widget_id, size) =>
+    setLayout(prev => prev.map(w => w.widget_id === widget_id ? { ...w, size } : w));
+
+  // Drag & drop handlers
+  const onDragStart = (i) => { dragIdx.current = i; };
+  const onDragEnter = (i) => { dragOver.current = i; };
+  const onDragEnd   = () => {
+    if (dragIdx.current === null || dragOver.current === null) return;
+    if (dragIdx.current === dragOver.current) return;
+    const next = [...layout];
+    const [moved] = next.splice(dragIdx.current, 1);
+    next.splice(dragOver.current, 0, moved);
+    setLayout(next.map((w, i) => ({ ...w, position: i })));
+    dragIdx.current  = null;
+    dragOver.current = null;
   };
 
-  const setSize = (widget_id, size) => {
-    setLayout(prev => prev.map(w =>
-      w.widget_id === widget_id ? { ...w, size } : w
-    ));
-  };
+  const moveUp   = (i) => { if (i === 0) return; const n = [...layout]; [n[i-1], n[i]] = [n[i], n[i-1]]; setLayout(n.map((w,j)=>({...w,position:j}))); };
+  const moveDown = (i) => { if (i === layout.length - 1) return; const n = [...layout]; [n[i], n[i+1]] = [n[i+1], n[i]]; setLayout(n.map((w,j)=>({...w,position:j}))); };
 
   const handleSave = async () => {
     setSaving(true);
-    await Promise.all([
-      saveSettings({ timezone }),
-      saveWidgetLayout(1, layout),
-    ]);
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => { setSaved(false); onClose(); }, 800);
+    try {
+      await Promise.all([
+        saveSettings({ timezone }),
+        saveWidgetLayout(1, layout.map((w, i) => ({ ...w, position: i }))),
+      ]);
+      setSaved(true);
+      setTimeout(() => { setSaved(false); onClose(); }, 700);
+    } catch (e) {
+      alert('Save failed: ' + e.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto"
          onClick={onClose}>
-      <div className="bg-surface border border-border rounded-xl w-full max-w-lg my-8 flex flex-col gap-6 p-6"
+      <div className="bg-surface border border-border rounded-xl w-full max-w-lg my-8 flex flex-col gap-5 p-6"
            onClick={e => e.stopPropagation()}>
 
         {/* Header */}
@@ -87,9 +110,7 @@ export default function SettingsPage({ onClose }) {
           <p className="text-xs text-dim">Used for displaying charging times correctly.</p>
           <select value={timezone} onChange={e => setTimezone(e.target.value)}
                   className="bg-bg border border-border rounded-lg text-slate-200 text-sm px-3 py-2 outline-none focus:border-accent">
-            {TIMEZONES.map(tz => (
-              <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>
-            ))}
+            {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>)}
           </select>
         </div>
 
@@ -99,16 +120,33 @@ export default function SettingsPage({ onClose }) {
         <div className="flex flex-col gap-3">
           <div>
             <p className="text-[0.6rem] uppercase tracking-widest text-accent font-semibold mb-1">Widgets</p>
-            <p className="text-xs text-dim">Toggle widgets on/off and choose how much detail to show.</p>
+            <p className="text-xs text-dim">Drag to reorder · toggle on/off · choose size (S / M / L)</p>
           </div>
 
           <div className="flex flex-col gap-1">
-            {layout.map(w => {
+            {layout.map((w, i) => {
               const meta = WIDGET_META[w.widget_id];
               if (!meta) return null;
               return (
                 <div key={w.widget_id}
-                     className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${w.enabled ? 'border-border bg-muted/40' : 'border-transparent bg-transparent opacity-50'}`}>
+                     draggable
+                     onDragStart={() => onDragStart(i)}
+                     onDragEnter={() => onDragEnter(i)}
+                     onDragEnd={onDragEnd}
+                     onDragOver={e => e.preventDefault()}
+                     className={`flex items-center gap-3 p-3 rounded-lg border cursor-grab active:cursor-grabbing transition-all select-none
+                       ${w.enabled ? 'border-border bg-muted/40' : 'border-transparent opacity-50'}`}>
+
+                  {/* Drag handle */}
+                  <span className="text-dim text-sm flex-shrink-0">⠿</span>
+
+                  {/* Up/down arrows for touch/mobile */}
+                  <div className="flex flex-col gap-0.5 flex-shrink-0">
+                    <button onClick={() => moveUp(i)}   disabled={i === 0}
+                            className="text-dim hover:text-slate-300 disabled:opacity-20 text-xs leading-none px-0.5">▲</button>
+                    <button onClick={() => moveDown(i)} disabled={i === layout.length - 1}
+                            className="text-dim hover:text-slate-300 disabled:opacity-20 text-xs leading-none px-0.5">▼</button>
+                  </div>
 
                   {/* Toggle */}
                   <div onClick={() => toggleWidget(w.widget_id)}
@@ -122,15 +160,14 @@ export default function SettingsPage({ onClose }) {
                     {meta.wide && <p className="text-[0.6rem] text-dim">Full width</p>}
                   </div>
 
-                  {/* Size selector */}
+                  {/* Size */}
                   <div className="flex gap-1">
                     {SIZE_OPTIONS.map(s => (
-                      <button key={s.value}
-                              title={s.title}
+                      <button key={s.value} title={s.title}
                               onClick={() => setSize(w.widget_id, s.value)}
                               disabled={!w.enabled}
                               className={`w-7 h-7 rounded text-xs font-bold transition-colors disabled:opacity-30 ${
-                                w.size === s.value
+                                (w.size || 'medium') === s.value
                                   ? 'bg-accent text-bg'
                                   : 'bg-muted text-dim hover:text-slate-300'
                               }`}>
@@ -150,7 +187,7 @@ export default function SettingsPage({ onClose }) {
                   saved
                     ? 'bg-success/20 border border-success/40 text-success'
                     : 'bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30'
-                }`}>
+                } disabled:opacity-60`}>
           {saved ? '✓ Saved' : saving ? 'Saving...' : 'Save settings'}
         </button>
       </div>

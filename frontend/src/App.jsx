@@ -4,6 +4,7 @@ import { fetchCarData, fetchHealth, fetchWidgetLayout, fetchSettings } from './l
 import WidgetCard      from './components/WidgetCard.jsx';
 import StatusBar       from './components/StatusBar.jsx';
 import SettingsPage    from './pages/SettingsPage.jsx';
+import UpdateChecker   from './components/UpdateChecker.jsx';
 
 import BatteryWidget      from './components/widgets/BatteryWidget.jsx';
 import TpmsWidget         from './components/widgets/TpmsWidget.jsx';
@@ -13,7 +14,7 @@ import MonthStatsWidget   from './components/widgets/MonthStatsWidget.jsx';
 import RecentDrivesWidget from './components/widgets/RecentDrivesWidget.jsx';
 import ChargeCostWidget   from './components/widgets/ChargeCostWidget.jsx';
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 
 const WIDGETS = {
   battery:       { component: BatteryWidget,       title: 'Battery & Range' },
@@ -82,6 +83,7 @@ export default function App() {
         </div>
 
         <StatusBar data={carData} loading={loading} onRefresh={refresh} dbOk={dbOk} />
+        <UpdateChecker />
 
         {/* Widget grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -10,6 +10,7 @@ import tariffsRouter from './routes/tariffs.js';
 import chargeCostRouter from './routes/chargeCost.js';
 import widgetsRouter from './routes/widgets.js';
 import settingsRouter from './routes/settings.js';
+import updateRouter from './routes/update.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app  = express();
@@ -23,6 +24,7 @@ app.use('/api/tariffs',     tariffsRouter);
 app.use('/api/charge-cost', chargeCostRouter);
 app.use('/api/widgets',     widgetsRouter);
 app.use('/api/settings',    settingsRouter);
+app.use('/api/update',      updateRouter);
 
 app.get('/api/health', async (req, res) => {
   const pg = await testConnection();

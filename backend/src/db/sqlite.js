@@ -18,6 +18,11 @@ export function getSqlite() {
 }
 
 function migrate(db) {
+  // Add size column if missing (migration from older schema)
+  try {
+    db.exec(`ALTER TABLE widget_layout ADD COLUMN size TEXT NOT NULL DEFAULT 'medium'`);
+  } catch {}
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS monthly_tariffs (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
