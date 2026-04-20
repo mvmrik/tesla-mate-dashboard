@@ -97,6 +97,16 @@ router.get('/:carId/data', async (req, res) => {
         AND d.distance > 0.5
     `, [carId, carId, carId, carId]);
 
+    const { rows: tempStats } = await pool.query(`
+      SELECT
+        ROUND(MIN(outside_temp)::numeric, 1) AS outside_temp_min,
+        ROUND(MAX(outside_temp)::numeric, 1) AS outside_temp_max
+      FROM positions
+      WHERE car_id = $1
+        AND (date AT TIME ZONE 'UTC' AT TIME ZONE $2)::date = (NOW() AT TIME ZONE $2)::date
+        AND outside_temp IS NOT NULL
+    `, [carId, process.env.TIMEZONE || 'UTC']);
+
     const { rows: lastDrives } = await pool.query(`
       SELECT
         start_date,
@@ -129,6 +139,8 @@ router.get('/:carId/data', async (req, res) => {
       ...row,
       month_stats: monthStats[0] || null,
       last_drives: lastDrives,
+      outside_temp_min: tempStats[0]?.outside_temp_min ?? null,
+      outside_temp_max: tempStats[0]?.outside_temp_max ?? null,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });

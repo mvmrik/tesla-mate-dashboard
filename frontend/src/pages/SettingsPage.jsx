@@ -17,7 +17,7 @@ const TIMEZONES = [
 const WIDGET_META = {
   battery:             { label: 'Battery & Range',     wide: false },
   tpms:                { label: 'Tyre Pressures',      wide: false },
-  climate:             { label: 'Temperature',          wide: false, sizes: ['small', 'medium'] },
+  climate:             { label: 'Temperature',          wide: false },
   monthly_driving:     { label: 'Monthly Driving',     wide: false },
   monthly_consumption: { label: 'Monthly Consumption', wide: false },
   recent_drives:       { label: 'Today & Yesterday',   wide: true  },
