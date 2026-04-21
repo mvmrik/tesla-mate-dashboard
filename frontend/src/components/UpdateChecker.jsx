@@ -14,10 +14,8 @@ function semverGt(a, b) {
 }
 
 export default function UpdateChecker() {
-  const [latest, setLatest]     = useState(null);
-  const [updating, setUpdating] = useState(false);
-  const [done, setDone]         = useState(false);
-  const [dismissed, setDismiss] = useState(false);
+  const [latest,    setLatest]    = useState(null);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     fetch(VERSION_URL)
@@ -28,40 +26,18 @@ export default function UpdateChecker() {
 
   if (!latest || !semverGt(latest, CURRENT) || dismissed) return null;
 
-  const handleUpdate = async () => {
-    setUpdating(true);
-    try {
-      await fetch('/api/update', { method: 'POST' });
-      setDone(true);
-      setTimeout(() => window.location.reload(), 8000);
-    } catch {
-      setDone('manual');
-    } finally {
-      setUpdating(false);
-    }
-  };
-
   return (
-    <div className="bg-accent/10 border border-accent/30 rounded-lg px-4 py-2.5 mb-4 flex items-center gap-3 flex-wrap">
-      <span className="text-accent text-sm">📦</span>
-      <span className="text-sm text-slate-300 flex-1">
-        New version <strong className="text-accent">{latest}</strong> is available
-        {done === true && <span className="text-success ml-2">— updating, page will reload shortly...</span>}
-        {done === 'manual' && (
-          <span className="text-dim ml-2">
-            — run: <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">docker compose pull && docker compose up -d</code>
-          </span>
-        )}
-      </span>
-      {!done && (
-        <>
-          <button onClick={handleUpdate} disabled={updating}
-                  className="text-xs bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 px-3 py-1 rounded-md disabled:opacity-50 whitespace-nowrap">
-            {updating ? 'Updating...' : '⬆ Update now'}
-          </button>
-        </>
-      )}
-      <button onClick={() => setDismiss(true)} className="text-dim hover:text-slate-300 text-sm">✕</button>
+    <div className="bg-accent/10 border border-accent/30 rounded-lg px-4 py-3 mb-4 flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm text-slate-300">
+          📦 New version <strong className="text-accent">{latest}</strong> available
+        </span>
+        <button onClick={() => setDismissed(true)} className="text-dim hover:text-slate-300 text-sm flex-shrink-0">✕</button>
+      </div>
+      <p className="text-xs text-dim">Run on your server to update:</p>
+      <code className="text-xs bg-bg border border-border rounded px-3 py-2 text-slate-300 font-mono select-all">
+        docker compose pull && docker compose up -d
+      </code>
     </div>
   );
 }
