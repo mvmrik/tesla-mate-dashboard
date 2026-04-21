@@ -12,35 +12,131 @@ import SettingsPage      from './pages/SettingsPage.jsx';
 import UpdateChecker     from './components/UpdateChecker.jsx';
 import AddWidgetModal    from './components/AddWidgetModal.jsx';
 
-import BatteryWidget            from './components/widgets/BatteryWidget.jsx';
-import TpmsWidget               from './components/widgets/TpmsWidget.jsx';
-import ClimateWidget            from './components/widgets/ClimateWidget.jsx';
-import MonthlyDrivingWidget     from './components/widgets/MonthlyDrivingWidget.jsx';
-import MonthlyConsumptionWidget from './components/widgets/MonthlyConsumptionWidget.jsx';
-import RecentDrivesWidget       from './components/widgets/RecentDrivesWidget.jsx';
-import ChargeCostWidget         from './components/widgets/ChargeCostWidget.jsx';
-import StatesWidget             from './components/widgets/StatesWidget.jsx';
-import LinkWidget               from './components/widgets/LinkWidget.jsx';
+import RecentDrivesWidget from './components/widgets/RecentDrivesWidget.jsx';
+import ChargeCostWidget   from './components/widgets/ChargeCostWidget.jsx';
+import StatesWidget       from './components/widgets/StatesWidget.jsx';
+import LinkWidget         from './components/widgets/LinkWidget.jsx';
+import Cell               from './components/Cell.jsx';
+import { batteryColor, tpmsColor, tpmsBar, tempColor, tempBar } from './components/Cell.jsx';
 
 const VERSION = '1.6.0';
 
+function tpmsAvg(...vals) {
+  const v = vals.filter(x => x != null).map(Number);
+  if (!v.length) return null;
+  return Math.round(v.reduce((a, b) => a + b, 0) / v.length * 10) / 10;
+}
+
 function renderWidgetComponent(widget, carData) {
-  const id = widget.widget_id;
+  const id  = widget.widget_id;
   const cfg = widget.config || {};
-  const size = 'medium';
+  const d   = carData;
+
+  // Monthly stats shorthand
+  const ms = d?.month_stats;
+
+  // Drive time formatting
+  const driveTimeValue = () => {
+    const totalMin = parseInt(ms?.total_min || 0);
+    const h = Math.floor(totalMin / 60), m = totalMin % 60;
+    const dim = s => <span className="text-sm font-normal text-dim ml-0.5">{s}</span>;
+    return totalMin < 60 ? <>{totalMin}{dim('min')}</> : <>{h}{dim('h')}{m > 0 && <>{m}{dim('m')}</>}</>;
+  };
 
   switch (id) {
-    case 'battery':              return <BatteryWidget data={carData} size={size} />;
-    case 'tpms':                 return <TpmsWidget data={carData} size={size} />;
-    case 'climate':              return <ClimateWidget data={carData} size={size} />;
-    case 'monthly_driving':      return <MonthlyDrivingWidget data={carData} size={size} />;
-    case 'monthly_consumption':  return <MonthlyConsumptionWidget data={carData} size={size} />;
-    case 'recent_drives':        return <RecentDrivesWidget data={carData} />;
-    case 'charge_cost':          return <ChargeCostWidget />;
-    case 'states_12h':           return <StatesWidget windowHours={12} />;
-    case 'states_24h':           return <StatesWidget windowHours={24} />;
-    case 'link':                 return <LinkWidget config={cfg} />;
-    default:                     return <div className="text-dim text-xs">{id}</div>;
+    // ── Battery ──
+    case 'battery_level': {
+      const pct = d?.battery_level ?? null;
+      return <Cell label="Battery" value={pct} unit="%" bar={pct} barColor={batteryColor(pct)} />;
+    }
+    case 'battery_range':
+      return <Cell label="Range" value={d?.rated_range_km} unit="km" />;
+    case 'battery_full': {
+      const pct = d?.battery_level ?? null;
+      return <Cell label="Battery" value={pct} unit="%" sub={d?.rated_range_km != null ? `${d.rated_range_km} km range` : null}
+                   bar={pct} barColor={batteryColor(pct)} />;
+    }
+    case 'last_charge':
+      return <Cell label="Last charge" value={d?.last_charge_end_pct} unit="%"
+                   sub={d?.last_charge_kwh != null ? `+${d.last_charge_kwh} kWh` : null} />;
+
+    // ── TPMS ──
+    case 'tpms_avg': {
+      const v = tpmsAvg(d?.tpms_pressure_fl, d?.tpms_pressure_fr, d?.tpms_pressure_rl, d?.tpms_pressure_rr);
+      return <Cell label="Tyres avg" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
+    }
+    case 'tpms_front': {
+      const v = tpmsAvg(d?.tpms_pressure_fl, d?.tpms_pressure_fr);
+      return <Cell label="Tyres front" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
+    }
+    case 'tpms_rear': {
+      const v = tpmsAvg(d?.tpms_pressure_rl, d?.tpms_pressure_rr);
+      return <Cell label="Tyres rear" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
+    }
+    case 'tpms_fl': {
+      const v = d?.tpms_pressure_fl != null ? parseFloat(d.tpms_pressure_fl) : null;
+      return <Cell label="Tyre FL" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
+    }
+    case 'tpms_fr': {
+      const v = d?.tpms_pressure_fr != null ? parseFloat(d.tpms_pressure_fr) : null;
+      return <Cell label="Tyre FR" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
+    }
+    case 'tpms_rl': {
+      const v = d?.tpms_pressure_rl != null ? parseFloat(d.tpms_pressure_rl) : null;
+      return <Cell label="Tyre RL" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
+    }
+    case 'tpms_rr': {
+      const v = d?.tpms_pressure_rr != null ? parseFloat(d.tpms_pressure_rr) : null;
+      return <Cell label="Tyre RR" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
+    }
+
+    // ── Climate ──
+    case 'temp_outside': {
+      const v = d?.outside_temp;
+      return <Cell label="Outside" value={v != null ? v + '°' : null} bar={tempBar(v)} barColor={tempColor(v)} />;
+    }
+    case 'temp_inside': {
+      const v = d?.inside_temp;
+      return <Cell label={d?.is_climate_on ? 'Inside ❄' : 'Inside'} value={v != null ? v + '°' : null}
+                   bar={tempBar(v)} barColor={tempColor(v)} />;
+    }
+    case 'temp_both': {
+      const out = d?.outside_temp, inn = d?.inside_temp;
+      return <Cell label="Temp"
+                   value={out != null ? out + '°' : null}
+                   sub={inn != null ? `Inside ${inn}°` : null}
+                   bar={tempBar(out)} barColor={tempColor(out)} />;
+    }
+    case 'temp_minmax': {
+      const mn = d?.outside_temp_min, mx = d?.outside_temp_max;
+      return <Cell label="Today min/max"
+                   value={mn != null && mx != null ? `${mn}° / ${mx}°` : null} />;
+    }
+
+    // ── Monthly driving ──
+    case 'monthly_distance':
+      return <Cell label="Distance this month" value={ms?.total_km} unit="km" />;
+    case 'monthly_speed':
+      return <Cell label="Avg speed this month" value={ms?.avg_speed_kmh} unit="km/h" />;
+    case 'monthly_drives':
+      return <Cell label="Drives this month" value={ms?.drives_count} />;
+    case 'monthly_drivetime':
+      return <Cell label="Drive time this month" value={ms?.total_min != null ? driveTimeValue() : null} />;
+    case 'monthly_kwh_per_100':
+      return <Cell label="Consumption this month" value={ms?.avg_kwh_per_100km} unit="kWh/100" />;
+    case 'monthly_kwh_total':
+      return <Cell label="Charged this month" value={ms?.total_kwh} unit="kWh" />;
+
+    // ── Wide ──
+    case 'recent_drives':  return <RecentDrivesWidget data={d} />;
+    case 'charge_cost':    return <ChargeCostWidget />;
+    case 'states_12h':     return <StatesWidget windowHours={12} />;
+    case 'states_24h':     return <StatesWidget windowHours={24} />;
+
+    // ── Link ──
+    case 'link': return <LinkWidget config={cfg} />;
+
+    default: return <div className="text-dim text-xs">{id}</div>;
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { WIDGET_REGISTRY } from '../lib/widgets.js';
 
 // Render a single slot cell
@@ -17,17 +17,14 @@ function SlotCell({ slotIndex, widget, editMode, onAdd, onDelete, renderWidget }
   const meta = WIDGET_REGISTRY[widget.widget_id];
 
   return (
-    <div className="bg-surface rounded-lg p-3 min-h-[90px] relative flex flex-col">
+    <div className="bg-surface rounded-lg min-h-[90px] relative overflow-hidden">
       {editMode && (
         <button onClick={() => onDelete(widget)}
-                className="absolute top-1.5 right-1.5 z-10 w-5 h-5 rounded-full bg-danger/20 border border-danger/40 text-danger text-xs flex items-center justify-center hover:bg-danger/40 transition-colors">
+                className="absolute top-1.5 right-1.5 z-10 w-5 h-5 rounded-full bg-black/60 border border-danger/60 text-danger text-xs flex items-center justify-center hover:bg-danger/40 transition-colors">
           ×
         </button>
       )}
-      <p className="text-[0.55rem] uppercase tracking-widest text-dim mb-2 flex-shrink-0">{meta?.label || widget.widget_id}</p>
-      <div className="flex-1">
-        {renderWidget(widget)}
-      </div>
+      {renderWidget(widget)}
     </div>
   );
 }
@@ -45,20 +42,15 @@ function DoubleSlotCell({ rowStart, widget, editMode, onAdd, onDelete, renderWid
     );
   }
 
-  const meta = WIDGET_REGISTRY[widget.widget_id];
-
   return (
-    <div className="col-span-2 bg-surface rounded-lg p-3 min-h-[90px] relative flex flex-col">
+    <div className="col-span-2 bg-surface rounded-lg min-h-[90px] relative overflow-hidden">
       {editMode && (
         <button onClick={() => onDelete(widget)}
-                className="absolute top-1.5 right-1.5 z-10 w-5 h-5 rounded-full bg-danger/20 border border-danger/40 text-danger text-xs flex items-center justify-center hover:bg-danger/40 transition-colors">
+                className="absolute top-1.5 right-1.5 z-10 w-5 h-5 rounded-full bg-black/60 border border-danger/60 text-danger text-xs flex items-center justify-center hover:bg-danger/40 transition-colors">
           ×
         </button>
       )}
-      <p className="text-[0.55rem] uppercase tracking-widest text-dim mb-2 flex-shrink-0">{meta?.label || widget.widget_id}</p>
-      <div className="flex-1">
-        {renderWidget(widget)}
-      </div>
+      {renderWidget(widget)}
     </div>
   );
 }
