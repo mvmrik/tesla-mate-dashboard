@@ -295,7 +295,7 @@ export default function ChargeCostWidget() {
   const partial   = result && result.cost_day == null && costDay != null;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 h-full">
       {/* Form */}
       <div className="flex flex-wrap gap-2 items-end">
         <div>

@@ -8,16 +8,16 @@ export default function AddWidgetModal({ block, targetSlot, usedWidgetIds, onAdd
   const [linkFetching, setLinkFetching] = useState(false);
   const [linkMeta, setLinkMeta]         = useState(null);
 
-  // Determine free slots in this block (slots 0-3, double widgets need slots on same row)
-  // targetSlot is the slot the "+" was clicked on (0-3), or null if picking freely
-  // Double widget needs 2 consecutive slots on same row: (0,1) or (2,3)
+  // Determine availability
   const doubleRow = targetSlot != null ? (targetSlot < 2 ? [0, 1] : [2, 3]) : null;
   const doubleAvailable = doubleRow
     ? !block.slots.some(s => doubleRow.includes(s.slot))
     : false;
+  const blockIsEmpty = block.slots.length === 0;
 
   const filtered = Object.entries(WIDGET_REGISTRY).filter(([id, meta]) => {
     if (cat !== 'all' && meta.category !== cat) return false;
+    if (meta.span === 4 && !blockIsEmpty) return false; // quad only in empty block
     if (meta.span === 2 && !doubleAvailable) return false;
     if (!meta.multi && usedWidgetIds.has(id)) return false;
     if (id === 'link') return false; // handled separately
@@ -26,7 +26,9 @@ export default function AddWidgetModal({ block, targetSlot, usedWidgetIds, onAdd
 
   const handleAdd = (widgetId, config = {}) => {
     const meta = WIDGET_REGISTRY[widgetId];
-    if (meta.span === 2) {
+    if (meta.span === 4) {
+      onAdd(widgetId, 0, config); // quad always goes in slot 0
+    } else if (meta.span === 2) {
       onAdd(widgetId, doubleRow[0], config);
     } else {
       onAdd(widgetId, targetSlot, config);
@@ -89,6 +91,9 @@ export default function AddWidgetModal({ block, targetSlot, usedWidgetIds, onAdd
               <button key={id} onClick={() => handleAdd(id)}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/60 text-left transition-colors w-full">
                 <span className="text-slate-200 text-sm flex-1">{meta.label}</span>
+                {meta.span === 4 && (
+                  <span className="text-[0.6rem] text-dim border border-border rounded px-1">Full block</span>
+                )}
                 {meta.span === 2 && (
                   <span className="text-[0.6rem] text-dim border border-border rounded px-1">Wide</span>
                 )}

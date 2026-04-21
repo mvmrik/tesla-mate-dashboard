@@ -1,14 +1,14 @@
 import React from 'react';
 
-export default function Cell({ label, value, unit, bar, barColor, sub, className = '' }) {
+export default function Cell({ label, value, unit, bar, barColor, sub, className = '', smallValue = false }) {
   return (
-    <div className={`bg-muted rounded-lg p-3 flex flex-col min-h-[80px] ${className}`}>
+    <div className={`bg-muted rounded-lg p-3 flex flex-col h-full min-h-[80px] ${className}`}>
       {label && (
         <p className="text-[0.6rem] uppercase tracking-widest text-accent font-semibold leading-none">
           {label}
         </p>
       )}
-      <p className="text-2xl font-bold text-slate-100 leading-tight mt-auto">
+      <p className={`${smallValue ? 'text-lg' : 'text-2xl'} font-bold text-slate-100 leading-tight mt-auto`}>
         {value ?? '—'}
         {unit && value != null && (
           <span className="text-sm font-normal text-dim ml-1">{unit}</span>

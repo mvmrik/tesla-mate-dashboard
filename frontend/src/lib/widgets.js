@@ -10,13 +10,7 @@ export const WIDGET_REGISTRY = {
     needsData: true,
   },
   battery_range: {
-    label: 'Battery & Range',
-    category: 'battery',
-    span: 1,
-    needsData: true,
-  },
-  battery_full: {
-    label: 'Battery (full)',
+    label: 'Range (km)',
     category: 'battery',
     span: 1,
     needsData: true,
@@ -30,7 +24,7 @@ export const WIDGET_REGISTRY = {
   charge_cost: {
     label: 'Charging Cost',
     category: 'battery',
-    span: 2,
+    span: 4,
     needsData: false,
   },
 
@@ -144,7 +138,7 @@ export const WIDGET_REGISTRY = {
   recent_drives: {
     label: 'Today & Yesterday',
     category: 'driving',
-    span: 2,
+    span: 4,
     needsData: true,
   },
 

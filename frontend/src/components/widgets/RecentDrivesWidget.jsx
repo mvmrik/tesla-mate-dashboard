@@ -23,7 +23,7 @@ export default function RecentDrivesWidget({ data, size = 'medium' }) {
   const largeCols = size === 'large';
 
   return (
-    <div className="overflow-x-auto -mx-1">
+    <div className="overflow-x-auto -mx-1 h-full">
       <table className="w-full text-xs min-w-[400px]">
         <thead>
           <tr>

@@ -51,11 +51,6 @@ function renderWidgetComponent(widget, carData) {
     }
     case 'battery_range':
       return <Cell label="Range" value={d?.rated_range_km} unit="km" />;
-    case 'battery_full': {
-      const pct = d?.battery_level ?? null;
-      return <Cell label="Battery" value={pct} unit="%" sub={d?.rated_range_km != null ? `${d.rated_range_km} km range` : null}
-                   bar={pct} barColor={batteryColor(pct)} />;
-    }
     case 'last_charge':
       return <Cell label="Last charge" value={d?.last_charge_end_pct} unit="%"
                    sub={d?.last_charge_kwh != null ? `+${d.last_charge_kwh} kWh` : null} />;
@@ -110,7 +105,8 @@ function renderWidgetComponent(widget, carData) {
     case 'temp_minmax': {
       const mn = d?.outside_temp_min, mx = d?.outside_temp_max;
       return <Cell label="Today min/max"
-                   value={mn != null && mx != null ? `${mn}° / ${mx}°` : null} />;
+                   value={mn != null && mx != null ? `${mn}° / ${mx}°` : null}
+                   smallValue />;
     }
 
     // ── Monthly driving ──
@@ -201,8 +197,10 @@ export default function App() {
 
   const handleAddWidget = async (blockId, widgetId, slot, config = {}) => {
     const meta = WIDGET_REGISTRY[widgetId];
-    if (meta.span === 2) {
-      // double widget: fill both slots in the row with same widget
+    if (meta.span === 4) {
+      // quad: just one record in slot 0
+      await addSlotWidget(blockId, 0, widgetId, config);
+    } else if (meta.span === 2) {
       const row = slot < 2 ? [0, 1] : [2, 3];
       await addSlotWidget(blockId, row[0], widgetId, config);
       await addSlotWidget(blockId, row[1], widgetId, config);
@@ -215,7 +213,6 @@ export default function App() {
   const handleDeleteWidget = async (widget) => {
     const meta = WIDGET_REGISTRY[widget.widget_id];
     if (meta?.span === 2) {
-      // Remove both slots in the row
       const block = blocks.find(b => b.id === widget.block_id);
       if (block) {
         const row = widget.slot < 2 ? [0, 1] : [2, 3];
