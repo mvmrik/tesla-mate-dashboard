@@ -13,6 +13,7 @@ import UpdateChecker     from './components/UpdateChecker.jsx';
 import AddWidgetModal    from './components/AddWidgetModal.jsx';
 
 import RecentDrivesWidget from './components/widgets/RecentDrivesWidget.jsx';
+import TripsWidget        from './components/widgets/TripsWidget.jsx';
 import ChargeCostWidget   from './components/widgets/ChargeCostWidget.jsx';
 import StatesWidget       from './components/widgets/StatesWidget.jsx';
 import LinkWidget         from './components/widgets/LinkWidget.jsx';
@@ -143,6 +144,7 @@ function renderWidgetComponent(widget, carData) {
     }
 
     // ── Activity / Wide ───────────────────────────────────────────────────────
+    case 'trips':          return <TripsWidget />;
     case 'recent_drives':  return <RecentDrivesWidget data={d} />;
     case 'charge_cost':    return <ChargeCostWidget />;
     case 'states_12h':     return <StatesWidget windowHours={12} />;

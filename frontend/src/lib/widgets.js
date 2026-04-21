@@ -189,6 +189,12 @@ export const WIDGET_REGISTRY = {
   },
 
   // ── Activity ────────────────────────────────────────────────────────────────
+  trips: {
+    label: 'Trips',
+    category: 'activity',
+    span: 4,
+    needsData: false,
+  },
   states_12h: {
     label: 'Car States 12h',
     category: 'activity',

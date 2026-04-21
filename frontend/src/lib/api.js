@@ -165,6 +165,38 @@ export async function deleteSlotWidget(slotId) {
   return r.json();
 }
 
+// Trips API
+export async function fetchActiveTrips(carId = 1) {
+  const r = await fetch(`${BASE}/trips/active?car_id=${carId}`);
+  if (!r.ok) return [];
+  return r.json();
+}
+
+export async function fetchTripHistory(carId = 1) {
+  const r = await fetch(`${BASE}/trips/history?car_id=${carId}`);
+  if (!r.ok) return [];
+  return r.json();
+}
+
+export async function createTrip(name, carId = 1) {
+  const r = await fetch(`${BASE}/trips`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, car_id: carId }),
+  });
+  return r.json();
+}
+
+export async function stopTrip(id) {
+  const r = await fetch(`${BASE}/trips/${id}/stop`, { method: 'PUT' });
+  return r.json();
+}
+
+export async function deleteTrip(id) {
+  const r = await fetch(`${BASE}/trips/${id}`, { method: 'DELETE' });
+  return r.json();
+}
+
 export async function updateSlotConfig(slotId, config) {
   const r = await fetch(`${BASE}/layout/slots/${slotId}/config`, {
     method: 'PUT',

@@ -43,6 +43,15 @@ function migrate(db) {
       position INTEGER NOT NULL DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS trips (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      car_id          INTEGER NOT NULL DEFAULT 1,
+      name            TEXT    NOT NULL,
+      start_date      TEXT    NOT NULL,
+      end_date        TEXT,
+      start_odometer  REAL
+    );
+
     CREATE TABLE IF NOT EXISTS slot_widgets (
       id        INTEGER PRIMARY KEY AUTOINCREMENT,
       block_id  INTEGER NOT NULL REFERENCES blocks(id) ON DELETE CASCADE,
