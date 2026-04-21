@@ -25,6 +25,10 @@ router.get('/:carId/data', async (req, res) => {
         p.usable_battery_level,
         ROUND(p.rated_battery_range_km::numeric, 0) AS rated_range_km,
         ROUND(p.est_battery_range_km::numeric, 0)   AS est_range_km,
+        CASE WHEN p.battery_level > 0
+          THEN ROUND((p.rated_battery_range_km / p.battery_level * 100)::numeric, 0)
+          ELSE NULL
+        END                                          AS rated_range_km_full,
         ROUND(p.odometer::numeric, 0)               AS odometer_km,
         p.outside_temp,
         p.inside_temp,

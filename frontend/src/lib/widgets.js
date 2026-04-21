@@ -85,12 +85,6 @@ export const WIDGET_REGISTRY = {
     span: 1,
     needsData: true,
   },
-  temp_both: {
-    label: 'Temp In & Out',
-    category: 'sensors',
-    span: 1,
-    needsData: true,
-  },
   temp_minmax: {
     label: 'Temp Min/Max today',
     category: 'sensors',

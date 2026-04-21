@@ -49,11 +49,17 @@ function renderWidgetComponent(widget, carData) {
       const pct = d?.battery_level ?? null;
       return <Cell label="Battery" value={pct} unit="%" bar={pct} barColor={batteryColor(pct)} />;
     }
-    case 'battery_range':
-      return <Cell label="Range" value={d?.rated_range_km} unit="km" />;
+    case 'battery_range': {
+      const km = d?.rated_range_km ?? null;
+      const maxKm = d?.rated_range_km_full ?? null;
+      const bar = km != null && maxKm != null && maxKm > 0
+        ? Math.min(100, km / maxKm * 100) : undefined;
+      return <Cell label="Range" value={km} unit="km" bar={bar} barColor={batteryColor(d?.battery_level)} />;
+    }
     case 'last_charge':
       return <Cell label="Last charge" value={d?.last_charge_end_pct} unit="%"
-                   sub={d?.last_charge_kwh != null ? `+${d.last_charge_kwh} kWh` : null} />;
+                   sub={d?.last_charge_kwh != null ? `+${d.last_charge_kwh} kWh` : null}
+                   subBottom />;
 
     // ── TPMS ──
     case 'tpms_avg': {
@@ -94,13 +100,6 @@ function renderWidgetComponent(widget, carData) {
       const v = d?.inside_temp;
       return <Cell label={d?.is_climate_on ? 'Inside ❄' : 'Inside'} value={v != null ? v + '°' : null}
                    bar={tempBar(v)} barColor={tempColor(v)} />;
-    }
-    case 'temp_both': {
-      const out = d?.outside_temp, inn = d?.inside_temp;
-      return <Cell label="Temp"
-                   value={out != null ? out + '°' : null}
-                   sub={inn != null ? `Inside ${inn}°` : null}
-                   bar={tempBar(out)} barColor={tempColor(out)} />;
     }
     case 'temp_minmax': {
       const mn = d?.outside_temp_min, mx = d?.outside_temp_max;

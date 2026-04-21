@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Cell({ label, value, unit, bar, barColor, sub, className = '', smallValue = false }) {
+export default function Cell({ label, value, unit, bar, barColor, sub, subBottom = false, className = '', smallValue = false }) {
   return (
     <div className={`bg-muted rounded-lg p-3 flex flex-col h-full min-h-[80px] ${className}`}>
       {label && (
@@ -8,23 +8,25 @@ export default function Cell({ label, value, unit, bar, barColor, sub, className
           {label}
         </p>
       )}
+      {sub != null && !subBottom && bar === undefined && (
+        <p className="text-xs text-dim mt-1">{sub}</p>
+      )}
       <p className={`${smallValue ? 'text-lg' : 'text-2xl'} font-bold text-slate-100 leading-tight mt-auto`}>
         {value ?? '—'}
         {unit && value != null && (
           <span className="text-sm font-normal text-dim ml-1">{unit}</span>
         )}
       </p>
-      {sub != null && bar === undefined && (
-        <p className="text-xs text-dim mt-1">{sub}</p>
-      )}
-      {/* Always reserve bar height so all cells are equal */}
+      {/* Always reserve bar/sub height so all cells align */}
       <div className="h-1.5 mt-1.5">
-        {bar !== undefined && (
+        {bar !== undefined ? (
           <div className="h-full bg-[#0f172a] rounded-full overflow-hidden">
             <div className="h-full rounded-full transition-all duration-500"
                  style={{ width: Math.max(0, Math.min(100, bar)) + '%', background: barColor || '#22c55e' }} />
           </div>
-        )}
+        ) : subBottom && sub != null ? (
+          <p className="text-xs text-dim leading-none">{sub}</p>
+        ) : null}
       </div>
     </div>
   );
