@@ -124,3 +124,52 @@ export async function saveSettings(data) {
   });
   return r.json();
 }
+
+// Block-based layout API
+export async function fetchLayout(carId = 1) {
+  const r = await fetch(`${BASE}/layout/${carId}`);
+  if (!r.ok) return [];
+  return r.json();
+}
+
+export async function addBlock(carId = 1) {
+  const r = await fetch(`${BASE}/layout/${carId}/blocks`, { method: 'POST' });
+  return r.json();
+}
+
+export async function deleteBlock(blockId) {
+  const r = await fetch(`${BASE}/layout/blocks/${blockId}`, { method: 'DELETE' });
+  return r.json();
+}
+
+export async function reorderBlocks(carId, ids) {
+  const r = await fetch(`${BASE}/layout/${carId}/blocks/reorder`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(ids),
+  });
+  return r.json();
+}
+
+export async function addSlotWidget(blockId, slot, widget_id, config = {}) {
+  const r = await fetch(`${BASE}/layout/blocks/${blockId}/slots`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slot, widget_id, config }),
+  });
+  return r.json();
+}
+
+export async function deleteSlotWidget(slotId) {
+  const r = await fetch(`${BASE}/layout/slots/${slotId}`, { method: 'DELETE' });
+  return r.json();
+}
+
+export async function updateSlotConfig(slotId, config) {
+  const r = await fetch(`${BASE}/layout/slots/${slotId}/config`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  });
+  return r.json();
+}

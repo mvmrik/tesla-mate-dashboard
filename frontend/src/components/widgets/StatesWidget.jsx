@@ -165,34 +165,26 @@ function ListModal({ segs, label, onClose }) {
   );
 }
 
-export default function StatesWidget({ size = 'medium' }) {
+export default function StatesWidget({ windowHours = 24 }) {
   const [states,   setStates]   = useState(null);
   const [selected, setSelected] = useState(null); // single segment modal
   const [listFor,  setListFor]  = useState(null); // { segs, label } for list modal
 
   useEffect(() => {
-    const hours = size === 'small' ? 12 : 48;
-    fetchCarStates(1, hours).then(setStates).catch(() => setStates([]));
-  }, [size]);
+    fetchCarStates(1, windowHours).then(setStates).catch(() => setStates([]));
+  }, [windowHours]);
 
   const now    = Date.now();
-  const h12ago = now - 12 * 3600000;
-  const h24ago = now - 24 * 3600000;
-  const h48ago = now - 48 * 3600000;
+  const winStart = now - windowHours * 3600000;
 
   if (states === null) return (
     <div className="flex flex-col gap-2">
       <div className="bg-muted rounded-lg min-h-[80px] animate-pulse" />
-      {size === 'large' && <div className="bg-muted rounded-lg min-h-[80px] animate-pulse" />}
     </div>
   );
 
-  const bars = size === 'small'
-    ? [{ winStart: h12ago, winEnd: now,    label: 'Last 12h' }]
-    : size === 'medium'
-    ? [{ winStart: h24ago, winEnd: now,    label: 'Last 24h' }]
-    : [{ winStart: h24ago, winEnd: now,    label: 'Last 24h' },
-       { winStart: h48ago, winEnd: h24ago, label: 'Previous 24h' }];
+  const label = `Last ${windowHours}h`;
+  const bars = [{ winStart, winEnd: now, label }];
 
   return (
     <div className="flex flex-col gap-2 h-full">

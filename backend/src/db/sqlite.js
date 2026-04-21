@@ -18,11 +18,6 @@ export function getSqlite() {
 }
 
 function migrate(db) {
-  // Add size column if missing (migration from older schema)
-  try {
-    db.exec(`ALTER TABLE widget_layout ADD COLUMN size TEXT NOT NULL DEFAULT 'medium'`);
-  } catch {}
-
   db.exec(`
     CREATE TABLE IF NOT EXISTS monthly_tariffs (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,45 +32,24 @@ function migrate(db) {
       UNIQUE(geofence_id, month, valid_from)
     );
 
-    CREATE TABLE IF NOT EXISTS widget_layout (
-      id        INTEGER PRIMARY KEY AUTOINCREMENT,
-      car_id    INTEGER NOT NULL DEFAULT 1,
-      widget_id TEXT    NOT NULL,
-      position  INTEGER NOT NULL DEFAULT 0,
-      enabled   INTEGER NOT NULL DEFAULT 1,
-      size      TEXT    NOT NULL DEFAULT 'medium',
-      UNIQUE(car_id, widget_id)
-    );
-
     CREATE TABLE IF NOT EXISTS app_settings (
       key   TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS links (
+    CREATE TABLE IF NOT EXISTS blocks (
       id       INTEGER PRIMARY KEY AUTOINCREMENT,
-      url      TEXT NOT NULL,
-      title    TEXT NOT NULL DEFAULT '',
-      favicon  TEXT NOT NULL DEFAULT '',
+      car_id   INTEGER NOT NULL DEFAULT 1,
       position INTEGER NOT NULL DEFAULT 0
     );
+
+    CREATE TABLE IF NOT EXISTS slot_widgets (
+      id        INTEGER PRIMARY KEY AUTOINCREMENT,
+      block_id  INTEGER NOT NULL REFERENCES blocks(id) ON DELETE CASCADE,
+      slot      INTEGER NOT NULL,
+      widget_id TEXT    NOT NULL,
+      config    TEXT    NOT NULL DEFAULT '{}',
+      UNIQUE(block_id, slot)
+    );
   `);
-
-  // All known widgets — new ones get added automatically if missing
-  const ALL_WIDGETS = [
-    'battery', 'tpms', 'climate',
-    'monthly_driving', 'monthly_consumption',
-    'recent_drives', 'charge_cost', 'links', 'states'
-  ];
-
-  const ins = db.prepare(
-    'INSERT OR IGNORE INTO widget_layout (car_id, widget_id, position, enabled) VALUES (1, ?, ?, 1)'
-  );
-  // Find highest existing position
-  const maxPos = db.prepare('SELECT COALESCE(MAX(position), -1) as m FROM widget_layout WHERE car_id = 1').get().m;
-  let pos = maxPos + 1;
-  for (const id of ALL_WIDGETS) {
-    const exists = db.prepare('SELECT 1 FROM widget_layout WHERE car_id = 1 AND widget_id = ?').get(id);
-    if (!exists) ins.run(id, pos++);
-  }
 }

@@ -12,6 +12,7 @@ import widgetsRouter from './routes/widgets.js';
 import settingsRouter from './routes/settings.js';
 import updateRouter from './routes/update.js';
 import linksRouter from './routes/links.js';
+import layoutRouter from './routes/layout.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app  = express();
@@ -27,6 +28,7 @@ app.use('/api/widgets',     widgetsRouter);
 app.use('/api/settings',    settingsRouter);
 app.use('/api/update',      updateRouter);
 app.use('/api/links',       linksRouter);
+app.use('/api/layout',      layoutRouter);
 
 app.get('/api/health', async (req, res) => {
   const pg = await testConnection();

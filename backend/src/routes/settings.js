@@ -5,6 +5,7 @@ const router = Router();
 
 const DEFAULTS = {
   timezone: 'UTC',
+  timeFormat: '24h',
 };
 
 router.get('/', (req, res) => {
@@ -17,7 +18,7 @@ router.get('/', (req, res) => {
 
 router.put('/', (req, res) => {
   const db = getSqlite();
-  const allowed = ['timezone'];
+  const allowed = ['timezone', 'timeFormat'];
   const upsert = db.prepare(
     'INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
   );
