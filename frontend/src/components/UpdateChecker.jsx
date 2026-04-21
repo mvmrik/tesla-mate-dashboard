@@ -13,8 +13,12 @@ function semverGt(a, b) {
   return false;
 }
 
+const CMD = 'docker compose pull && docker compose up -d';
+
 export default function UpdateChecker() {
   const [latest,    setLatest]    = useState(null);
+  const [showCmd,   setShowCmd]   = useState(false);
+  const [copied,    setCopied]    = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
@@ -26,18 +30,37 @@ export default function UpdateChecker() {
 
   if (!latest || !semverGt(latest, CURRENT) || dismissed) return null;
 
+  const copy = () => {
+    navigator.clipboard.writeText(CMD).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   return (
-    <div className="bg-accent/10 border border-accent/30 rounded-lg px-4 py-3 mb-4 flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-slate-300">
+    <div className="bg-accent/10 border border-accent/30 rounded-lg px-4 py-2.5 mb-4 flex flex-col gap-2">
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-slate-300 flex-1">
           📦 New version <strong className="text-accent">{latest}</strong> available
         </span>
-        <button onClick={() => setDismissed(true)} className="text-dim hover:text-slate-300 text-sm flex-shrink-0">✕</button>
+        <button onClick={() => setShowCmd(s => !s)}
+                className="text-xs bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 px-3 py-1 rounded-md whitespace-nowrap">
+          ⬆ Update
+        </button>
+        <button onClick={() => setDismissed(true)} className="text-dim hover:text-slate-300 text-sm">✕</button>
       </div>
-      <p className="text-xs text-dim">Run on your server to update:</p>
-      <code className="text-xs bg-bg border border-border rounded px-3 py-2 text-slate-300 font-mono select-all">
-        docker compose pull && docker compose up -d
-      </code>
+
+      {showCmd && (
+        <div className="flex items-center gap-2 bg-bg border border-border rounded-lg px-3 py-2">
+          <code className="text-xs text-slate-300 font-mono flex-1 select-all">{CMD}</code>
+          <button onClick={copy}
+                  className={`text-xs px-2 py-1 rounded transition-colors flex-shrink-0 ${
+                    copied ? 'text-success' : 'text-dim hover:text-slate-300'
+                  }`}>
+            {copied ? '✓' : 'Copy'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
