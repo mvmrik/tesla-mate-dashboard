@@ -1,10 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  fetchCarData, fetchHealth, fetchLayout,
+  fetchCarData, fetchHealth, fetchLayout, fetchSettings,
   addBlock, deleteBlock, reorderBlocks,
   addSlotWidget, deleteSlotWidget,
 } from './lib/api.js';
 import { WIDGET_REGISTRY } from './lib/widgets.js';
+import { SettingsContext } from './lib/SettingsContext.js';
+import {
+  fmtDist, distLabel, fmtSpeed, speedLabel,
+  fmtTemp, tempLabel, fmtConsumption, consumptionLabel,
+} from './lib/units.js';
 
 import Block             from './components/Block.jsx';
 import StatusBar         from './components/StatusBar.jsx';
@@ -20,7 +25,7 @@ import LinkWidget         from './components/widgets/LinkWidget.jsx';
 import Cell               from './components/Cell.jsx';
 import { batteryColor, tpmsColor, tpmsBar, tempColor, tempBar } from './components/Cell.jsx';
 
-const VERSION = '1.6.0';
+const VERSION = '1.7.0';
 
 function tpmsAvg(...vals) {
   const v = vals.filter(x => x != null).map(Number);
@@ -28,13 +33,16 @@ function tpmsAvg(...vals) {
   return Math.round(v.reduce((a, b) => a + b, 0) / v.length * 10) / 10;
 }
 
-function renderWidgetComponent(widget, carData) {
+function renderWidgetComponent(widget, carData, settings = {}) {
   const id  = widget.widget_id;
   const cfg = widget.config || {};
   const d   = carData;
 
   const ms = d?.month_stats;
   const ts = d?.today_stats;
+
+  const du = settings.distanceUnit || 'km';
+  const tu = settings.tempUnit     || 'C';
 
   // Shared drive time formatter
   const fmtDriveTime = (totalMin) => {
@@ -50,7 +58,7 @@ function renderWidgetComponent(widget, carData) {
     // ── Battery & Charging ───────────────────────────────────────────────────
     case 'battery_health': {
       const km = d?.rated_range_km_full ?? null;
-      return <Cell label="Battery Health" value={km} unit="km" sub="Est. range at 100%" subBottom />;
+      return <Cell label="Battery Health" value={fmtDist(km, du)} unit={distLabel(du)} sub="Est. range at 100%" subBottom />;
     }
     case 'battery_level': {
       const pct = d?.battery_level ?? null;
@@ -61,7 +69,7 @@ function renderWidgetComponent(widget, carData) {
       const maxKm = d?.rated_range_km_full ?? null;
       const bar = km != null && maxKm != null && maxKm > 0
         ? Math.min(100, km / maxKm * 100) : undefined;
-      return <Cell label="Battery Range" value={km} unit="km" bar={bar} barColor={batteryColor(d?.battery_level)} />;
+      return <Cell label="Battery Range" value={fmtDist(km, du)} unit={distLabel(du)} bar={bar} barColor={batteryColor(d?.battery_level)} />;
     }
     case 'last_charge':
       return <Cell label="Last Charge" value={d?.last_charge_end_pct} unit="%"
@@ -71,48 +79,50 @@ function renderWidgetComponent(widget, carData) {
 
     // ── Driving — Monthly ────────────────────────────────────────────────────
     case 'monthly_avg_speed':
-      return <Cell label="Monthly Avg Speed" value={ms?.avg_speed_kmh} unit="km/h" />;
+      return <Cell label="Monthly Avg Speed" value={fmtSpeed(ms?.avg_speed_kmh, du)} unit={speedLabel(du)} />;
     case 'monthly_distance':
-      return <Cell label="Monthly Distance" value={ms?.total_km} unit="km" />;
+      return <Cell label="Monthly Distance" value={fmtDist(ms?.total_km, du)} unit={distLabel(du)} />;
     case 'monthly_drive_time':
       return <Cell label="Monthly Drive Time" value={fmtDriveTime(ms?.total_min)} />;
     case 'monthly_drives':
       return <Cell label="Monthly Drives" value={ms?.drives_count} />;
     case 'monthly_kwh_per_100':
-      return <Cell label="Monthly kWh/100km" value={ms?.avg_kwh_per_100km} unit="kWh/100" />;
+      return <Cell label={`Monthly ${consumptionLabel(du)}`} value={fmtConsumption(ms?.avg_kwh_per_100km, du)} unit="kWh/100" />;
     case 'monthly_max_speed':
-      return <Cell label="Monthly Max Speed" value={ms?.speed_max} unit="km/h" />;
+      return <Cell label="Monthly Max Speed" value={fmtSpeed(ms?.speed_max, du)} unit={speedLabel(du)} />;
     case 'odometer':
-      return <Cell label="Odometer" value={d?.odometer_km} unit="km" />;
+      return <Cell label="Odometer" value={fmtDist(d?.odometer_km, du)} unit={distLabel(du)} />;
 
     // ── Driving — Today ──────────────────────────────────────────────────────
     case 'today_avg_speed':
-      return <Cell label="Today Avg Speed" value={ts?.avg_speed_kmh} unit="km/h" />;
+      return <Cell label="Today Avg Speed" value={fmtSpeed(ts?.avg_speed_kmh, du)} unit={speedLabel(du)} />;
     case 'today_distance':
-      return <Cell label="Today Distance" value={ts?.total_km} unit="km" />;
+      return <Cell label="Today Distance" value={fmtDist(ts?.total_km, du)} unit={distLabel(du)} />;
     case 'today_drive_time':
       return <Cell label="Today Drive Time" value={fmtDriveTime(ts?.total_min)} />;
     case 'today_drives':
       return <Cell label="Today Drives" value={ts?.drives_count} />;
     case 'today_kwh_per_100':
-      return <Cell label="Today kWh/100km" value={ts?.avg_kwh_per_100km} unit="kWh/100" />;
+      return <Cell label={`Today ${consumptionLabel(du)}`} value={fmtConsumption(ts?.avg_kwh_per_100km, du)} unit="kWh/100" />;
     case 'today_max_speed':
-      return <Cell label="Today Max Speed" value={ts?.speed_max} unit="km/h" />;
+      return <Cell label="Today Max Speed" value={fmtSpeed(ts?.speed_max, du)} unit={speedLabel(du)} />;
 
     // ── Sensors ──────────────────────────────────────────────────────────────
     case 'temp_inside': {
       const v = d?.inside_temp;
+      const fv = fmtTemp(v, tu);
       return <Cell label={d?.is_climate_on ? 'Inside Temp ❄' : 'Inside Temp'}
-                   value={v != null ? v + '°' : null} bar={tempBar(v)} barColor={tempColor(v)} />;
+                   value={fv != null ? fv + '°' : null} bar={tempBar(v)} barColor={tempColor(v)} />;
     }
     case 'temp_minmax': {
-      const mn = d?.outside_temp_min, mx = d?.outside_temp_max;
+      const mn = fmtTemp(d?.outside_temp_min, tu), mx = fmtTemp(d?.outside_temp_max, tu);
       return <Cell label="Outside Temp Min/Max"
                    value={mn != null && mx != null ? `${mn}° / ${mx}°` : null} smallValue />;
     }
     case 'temp_outside': {
       const v = d?.outside_temp;
-      return <Cell label="Outside Temp" value={v != null ? v + '°' : null} bar={tempBar(v)} barColor={tempColor(v)} />;
+      const fv = fmtTemp(v, tu);
+      return <Cell label="Outside Temp" value={fv != null ? fv + '°' : null} bar={tempBar(v)} barColor={tempColor(v)} />;
     }
     case 'tpms_avg': {
       const v = tpmsAvg(d?.tpms_pressure_fl, d?.tpms_pressure_fr, d?.tpms_pressure_rl, d?.tpms_pressure_rr);
@@ -165,6 +175,7 @@ export default function App() {
   const [editMode,      setEditMode]      = useState(false);
   const [showSettings,  setShowSettings]  = useState(false);
   const [addModal,      setAddModal]      = useState(null); // { block, slot }
+  const [settings,      setSettings]      = useState({ timeFormat: '24h', distanceUnit: 'km', tempUnit: 'C' });
   const dragIdx   = useRef(null);
   const dragOver  = useRef(null);
 
@@ -188,6 +199,7 @@ export default function App() {
   useEffect(() => {
     loadLayout();
     refresh();
+    fetchSettings().then(s => setSettings(s)).catch(() => {});
     const iv = setInterval(refresh, 60000);
     return () => clearInterval(iv);
   }, [refresh, loadLayout]);
@@ -251,9 +263,10 @@ export default function App() {
     blocks.flatMap(b => b.slots.map(s => s.widget_id))
   );
 
-  const renderWidget = (widget) => renderWidgetComponent(widget, carData);
+  const renderWidget = (widget) => renderWidgetComponent(widget, carData, settings);
 
   return (
+    <SettingsContext.Provider value={settings}>
     <div className="min-h-screen bg-bg text-slate-200">
       <div className="max-w-5xl mx-auto px-4 py-8">
 
@@ -341,7 +354,10 @@ export default function App() {
       </div>
 
       {showSettings && (
-        <SettingsPage onClose={() => setShowSettings(false)} />
+        <SettingsPage onClose={() => {
+          setShowSettings(false);
+          fetchSettings().then(s => setSettings(s)).catch(() => {});
+        }} />
       )}
 
       {addModal && (
@@ -354,5 +370,6 @@ export default function App() {
         />
       )}
     </div>
+    </SettingsContext.Provider>
   );
 }

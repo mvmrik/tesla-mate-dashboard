@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { fetchActiveTrips, fetchTripHistory, createTrip, stopTrip, deleteTrip } from '../../lib/api.js';
+import { useSettings } from '../../lib/SettingsContext.js';
+import { fmtDateTime } from '../../lib/units.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -8,18 +10,6 @@ function fmtDur(totalMin) {
   const m = parseInt(totalMin);
   const h = Math.floor(m / 60), rem = m % 60;
   return h > 0 ? `${h}h ${rem > 0 ? rem + 'm' : ''}`.trim() : `${m}m`;
-}
-
-function fmtDate(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function fmtDateTime(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString([], {
-    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-  });
 }
 
 function StatPill({ label, value, unit }) {
@@ -36,7 +26,7 @@ function StatPill({ label, value, unit }) {
 
 // ── Trip row (compact, used in widget) ───────────────────────────────────────
 
-function ActiveTripCard({ trip, onStop }) {
+function ActiveTripCard({ trip, onStop, timeFormat }) {
   const s = trip.stats || {};
   return (
     <div className="flex flex-col gap-1.5 bg-muted/60 rounded-lg px-3 py-2.5">
@@ -57,7 +47,7 @@ function ActiveTripCard({ trip, onStop }) {
         <StatPill label="Max speed" value={s.speed_max} unit="km/h" />
         <StatPill label="kWh/100" value={s.avg_kwh_per_100km} />
       </div>
-      <span className="text-[0.6rem] text-dim">Started {fmtDateTime(trip.start_date)}
+      <span className="text-[0.6rem] text-dim">Started {fmtDateTime(trip.start_date, timeFormat)}
         {trip.start_odometer != null && ` · ${trip.start_odometer} km`}</span>
     </div>
   );
@@ -65,7 +55,7 @@ function ActiveTripCard({ trip, onStop }) {
 
 // ── History modal ─────────────────────────────────────────────────────────────
 
-function TripModal({ activeTrips, onClose, onStop, onDelete, onRefresh }) {
+function TripModal({ activeTrips, onClose, onStop, onDelete, onRefresh, timeFormat }) {
   const [history, setHistory]   = useState(null);
   const [loading, setLoading]   = useState(true);
 
@@ -104,9 +94,9 @@ function TripModal({ activeTrips, onClose, onStop, onDelete, onRefresh }) {
             {trip.name}
           </span>
         </td>
-        <td className="py-2 pr-3 text-dim text-xs whitespace-nowrap">{fmtDateTime(trip.start_date)}</td>
+        <td className="py-2 pr-3 text-dim text-xs whitespace-nowrap">{fmtDateTime(trip.start_date, timeFormat)}</td>
         <td className="py-2 pr-3 text-dim text-xs whitespace-nowrap">
-          {isActive ? <span className="text-success text-xs">Active</span> : fmtDateTime(trip.end_date)}
+          {isActive ? <span className="text-success text-xs">Active</span> : fmtDateTime(trip.end_date, timeFormat)}
         </td>
         <td className="py-2 pr-3 text-slate-200 font-semibold">{s.total_km ?? '—'}</td>
         <td className="py-2 pr-3 text-dim whitespace-nowrap">{fmtDur(s.total_min)}</td>
@@ -173,6 +163,7 @@ function TripModal({ activeTrips, onClose, onStop, onDelete, onRefresh }) {
 // ── Main widget ───────────────────────────────────────────────────────────────
 
 export default function TripsWidget() {
+  const { timeFormat } = useSettings();
   const [trips,    setTrips]    = useState(null);
   const [newName,  setNewName]  = useState('');
   const [adding,   setAdding]   = useState(false);
@@ -266,7 +257,7 @@ export default function TripsWidget() {
           </div>
         )}
         {active.map(trip => (
-          <ActiveTripCard key={trip.id} trip={trip} onStop={handleStop} />
+          <ActiveTripCard key={trip.id} trip={trip} onStop={handleStop} timeFormat={timeFormat} />
         ))}
       </div>
 
@@ -277,6 +268,7 @@ export default function TripsWidget() {
           onStop={handleStop}
           onDelete={handleDelete}
           onRefresh={load}
+          timeFormat={timeFormat}
         />
       )}
     </div>

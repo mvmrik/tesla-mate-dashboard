@@ -15,22 +15,26 @@ const TIMEZONES = [
 ];
 
 export default function SettingsPage({ onClose }) {
-  const [timezone,   setTimezone]   = useState('UTC');
-  const [timeFormat, setTimeFormat] = useState('24h');
-  const [saving,     setSaving]     = useState(false);
-  const [saved,      setSaved]      = useState(false);
+  const [timezone,      setTimezone]      = useState('UTC');
+  const [timeFormat,    setTimeFormat]    = useState('24h');
+  const [distanceUnit,  setDistanceUnit]  = useState('km');
+  const [tempUnit,      setTempUnit]      = useState('C');
+  const [saving,        setSaving]        = useState(false);
+  const [saved,         setSaved]         = useState(false);
 
   useEffect(() => {
     fetchSettings().then(s => {
-      if (s.timezone)   setTimezone(s.timezone);
-      if (s.timeFormat) setTimeFormat(s.timeFormat);
+      if (s.timezone)     setTimezone(s.timezone);
+      if (s.timeFormat)   setTimeFormat(s.timeFormat);
+      if (s.distanceUnit) setDistanceUnit(s.distanceUnit);
+      if (s.tempUnit)     setTempUnit(s.tempUnit);
     });
   }, []);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await saveSettings({ timezone, timeFormat });
+      await saveSettings({ timezone, timeFormat, distanceUnit, tempUnit });
       setSaved(true);
       setTimeout(() => { setSaved(false); onClose(); }, 700);
     } catch (e) {
@@ -75,6 +79,44 @@ export default function SettingsPage({ onClose }) {
                           : 'bg-muted border-border text-dim hover:text-slate-300'
                       }`}>
                 {f === '24h' ? '24-hour (14:30)' : '12-hour (2:30 PM)'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <hr className="border-border" />
+
+        {/* Distance unit */}
+        <div className="flex flex-col gap-2">
+          <label className="text-[0.6rem] uppercase tracking-widest text-accent font-semibold">Distance Unit</label>
+          <div className="flex gap-2">
+            {[['km', 'Kilometres (km)'], ['mi', 'Miles (mi)']].map(([val, label]) => (
+              <button key={val} onClick={() => setDistanceUnit(val)}
+                      className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                        distanceUnit === val
+                          ? 'bg-accent/20 border-accent/50 text-accent'
+                          : 'bg-muted border-border text-dim hover:text-slate-300'
+                      }`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <hr className="border-border" />
+
+        {/* Temperature unit */}
+        <div className="flex flex-col gap-2">
+          <label className="text-[0.6rem] uppercase tracking-widest text-accent font-semibold">Temperature Unit</label>
+          <div className="flex gap-2">
+            {[['C', 'Celsius (°C)'], ['F', 'Fahrenheit (°F)']].map(([val, label]) => (
+              <button key={val} onClick={() => setTempUnit(val)}
+                      className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                        tempUnit === val
+                          ? 'bg-accent/20 border-accent/50 text-accent'
+                          : 'bg-muted border-border text-dim hover:text-slate-300'
+                      }`}>
+                {label}
               </button>
             ))}
           </div>

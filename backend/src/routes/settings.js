@@ -4,8 +4,10 @@ import { getSqlite } from '../db/sqlite.js';
 const router = Router();
 
 const DEFAULTS = {
-  timezone: 'UTC',
-  timeFormat: '24h',
+  timezone:     'UTC',
+  timeFormat:   '24h',
+  distanceUnit: 'km',
+  tempUnit:     'C',
 };
 
 router.get('/', (req, res) => {
@@ -18,7 +20,7 @@ router.get('/', (req, res) => {
 
 router.put('/', (req, res) => {
   const db = getSqlite();
-  const allowed = ['timezone', 'timeFormat'];
+  const allowed = ['timezone', 'timeFormat', 'distanceUnit', 'tempUnit'];
   const upsert = db.prepare(
     'INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
   );
