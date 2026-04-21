@@ -25,7 +25,7 @@ async function getTripStats(pool, carId, startDate, endDate) {
     JOIN cars c ON c.id = d.car_id
     WHERE d.car_id = $1
       AND d.end_date IS NOT NULL
-      AND d.start_date >= $2::timestamptz
+      AND d.end_date >= $2::timestamptz
       AND ($3::timestamptz IS NULL OR d.start_date <= $3::timestamptz)
       AND d.distance > 0.1
   `, [carId, startDate, endDate || null]);
