@@ -15,14 +15,16 @@ export default function AddWidgetModal({ block, targetSlot, usedWidgetIds, onAdd
     : false;
   const blockIsEmpty = block.slots.length === 0;
 
-  const filtered = Object.entries(WIDGET_REGISTRY).filter(([id, meta]) => {
-    if (cat !== 'all' && meta.category !== cat) return false;
-    if (meta.span === 4 && !blockIsEmpty) return false; // quad only in empty block
-    if (meta.span === 2 && !doubleAvailable) return false;
-    if (!meta.multi && usedWidgetIds.has(id)) return false;
-    if (id === 'link') return false; // handled separately
-    return true;
-  });
+  const filtered = Object.entries(WIDGET_REGISTRY)
+    .filter(([id, meta]) => {
+      if (cat !== 'all' && meta.category !== cat) return false;
+      if (meta.span === 4 && !blockIsEmpty) return false;
+      if (meta.span === 2 && !doubleAvailable) return false;
+      if (!meta.multi && usedWidgetIds.has(id)) return false;
+      if (id === 'link') return false; // handled separately below
+      return true;
+    })
+    .sort((a, b) => a[1].label.localeCompare(b[1].label));
 
   const handleAdd = (widgetId, config = {}) => {
     const meta = WIDGET_REGISTRY[widgetId];

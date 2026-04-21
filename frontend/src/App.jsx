@@ -32,103 +32,123 @@ function renderWidgetComponent(widget, carData) {
   const cfg = widget.config || {};
   const d   = carData;
 
-  // Monthly stats shorthand
   const ms = d?.month_stats;
+  const ts = d?.today_stats;
 
-  // Drive time formatting
-  const driveTimeValue = () => {
-    const totalMin = parseInt(ms?.total_min || 0);
-    const h = Math.floor(totalMin / 60), m = totalMin % 60;
+  // Shared drive time formatter
+  const fmtDriveTime = (totalMin) => {
+    if (totalMin == null) return null;
+    const min = parseInt(totalMin);
+    const h = Math.floor(min / 60), m = min % 60;
     const dim = s => <span className="text-sm font-normal text-dim ml-0.5">{s}</span>;
-    return totalMin < 60 ? <>{totalMin}{dim('min')}</> : <>{h}{dim('h')}{m > 0 && <>{m}{dim('m')}</>}</>;
+    return min < 60 ? <>{min}{dim('min')}</> : <>{h}{dim('h')}{m > 0 && <>{m}{dim('m')}</>}</>;
   };
 
   switch (id) {
-    // ── Battery ──
+
+    // ── Battery & Charging ───────────────────────────────────────────────────
+    case 'battery_health': {
+      const km = d?.rated_range_km_full ?? null;
+      return <Cell label="Battery Health" value={km} unit="km" sub="Est. range at 100%" subBottom />;
+    }
     case 'battery_level': {
       const pct = d?.battery_level ?? null;
-      return <Cell label="Battery" value={pct} unit="%" bar={pct} barColor={batteryColor(pct)} />;
+      return <Cell label="Battery %" value={pct} unit="%" bar={pct} barColor={batteryColor(pct)} />;
     }
     case 'battery_range': {
       const km = d?.rated_range_km ?? null;
       const maxKm = d?.rated_range_km_full ?? null;
       const bar = km != null && maxKm != null && maxKm > 0
         ? Math.min(100, km / maxKm * 100) : undefined;
-      return <Cell label="Range" value={km} unit="km" bar={bar} barColor={batteryColor(d?.battery_level)} />;
+      return <Cell label="Battery Range" value={km} unit="km" bar={bar} barColor={batteryColor(d?.battery_level)} />;
     }
     case 'last_charge':
-      return <Cell label="Last charge" value={d?.last_charge_end_pct} unit="%"
-                   sub={d?.last_charge_kwh != null ? `+${d.last_charge_kwh} kWh` : null}
-                   subBottom />;
+      return <Cell label="Last Charge" value={d?.last_charge_end_pct} unit="%"
+                   sub={d?.last_charge_kwh != null ? `+${d.last_charge_kwh} kWh` : null} subBottom />;
+    case 'monthly_kwh_charged':
+      return <Cell label="Monthly kWh Charged" value={ms?.total_kwh} unit="kWh" />;
 
-    // ── TPMS ──
-    case 'tpms_avg': {
-      const v = tpmsAvg(d?.tpms_pressure_fl, d?.tpms_pressure_fr, d?.tpms_pressure_rl, d?.tpms_pressure_rr);
-      return <Cell label="Tyres avg" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
-    }
-    case 'tpms_front': {
-      const v = tpmsAvg(d?.tpms_pressure_fl, d?.tpms_pressure_fr);
-      return <Cell label="Tyres front" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
-    }
-    case 'tpms_rear': {
-      const v = tpmsAvg(d?.tpms_pressure_rl, d?.tpms_pressure_rr);
-      return <Cell label="Tyres rear" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
-    }
-    case 'tpms_fl': {
-      const v = d?.tpms_pressure_fl != null ? parseFloat(d.tpms_pressure_fl) : null;
-      return <Cell label="Tyre FL" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
-    }
-    case 'tpms_fr': {
-      const v = d?.tpms_pressure_fr != null ? parseFloat(d.tpms_pressure_fr) : null;
-      return <Cell label="Tyre FR" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
-    }
-    case 'tpms_rl': {
-      const v = d?.tpms_pressure_rl != null ? parseFloat(d.tpms_pressure_rl) : null;
-      return <Cell label="Tyre RL" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
-    }
-    case 'tpms_rr': {
-      const v = d?.tpms_pressure_rr != null ? parseFloat(d.tpms_pressure_rr) : null;
-      return <Cell label="Tyre RR" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
-    }
+    // ── Driving — Monthly ────────────────────────────────────────────────────
+    case 'monthly_avg_speed':
+      return <Cell label="Monthly Avg Speed" value={ms?.avg_speed_kmh} unit="km/h" />;
+    case 'monthly_distance':
+      return <Cell label="Monthly Distance" value={ms?.total_km} unit="km" />;
+    case 'monthly_drive_time':
+      return <Cell label="Monthly Drive Time" value={fmtDriveTime(ms?.total_min)} />;
+    case 'monthly_drives':
+      return <Cell label="Monthly Drives" value={ms?.drives_count} />;
+    case 'monthly_kwh_per_100':
+      return <Cell label="Monthly kWh/100km" value={ms?.avg_kwh_per_100km} unit="kWh/100" />;
+    case 'monthly_max_speed':
+      return <Cell label="Monthly Max Speed" value={ms?.speed_max} unit="km/h" />;
+    case 'odometer':
+      return <Cell label="Odometer" value={d?.odometer_km} unit="km" />;
 
-    // ── Climate ──
-    case 'temp_outside': {
-      const v = d?.outside_temp;
-      return <Cell label="Outside" value={v != null ? v + '°' : null} bar={tempBar(v)} barColor={tempColor(v)} />;
-    }
+    // ── Driving — Today ──────────────────────────────────────────────────────
+    case 'today_avg_speed':
+      return <Cell label="Today Avg Speed" value={ts?.avg_speed_kmh} unit="km/h" />;
+    case 'today_distance':
+      return <Cell label="Today Distance" value={ts?.total_km} unit="km" />;
+    case 'today_drive_time':
+      return <Cell label="Today Drive Time" value={fmtDriveTime(ts?.total_min)} />;
+    case 'today_drives':
+      return <Cell label="Today Drives" value={ts?.drives_count} />;
+    case 'today_kwh_per_100':
+      return <Cell label="Today kWh/100km" value={ts?.avg_kwh_per_100km} unit="kWh/100" />;
+    case 'today_max_speed':
+      return <Cell label="Today Max Speed" value={ts?.speed_max} unit="km/h" />;
+
+    // ── Sensors ──────────────────────────────────────────────────────────────
     case 'temp_inside': {
       const v = d?.inside_temp;
-      return <Cell label={d?.is_climate_on ? 'Inside ❄' : 'Inside'} value={v != null ? v + '°' : null}
-                   bar={tempBar(v)} barColor={tempColor(v)} />;
+      return <Cell label={d?.is_climate_on ? 'Inside Temp ❄' : 'Inside Temp'}
+                   value={v != null ? v + '°' : null} bar={tempBar(v)} barColor={tempColor(v)} />;
     }
     case 'temp_minmax': {
       const mn = d?.outside_temp_min, mx = d?.outside_temp_max;
-      return <Cell label="Today min/max"
-                   value={mn != null && mx != null ? `${mn}° / ${mx}°` : null}
-                   smallValue />;
+      return <Cell label="Outside Temp Min/Max"
+                   value={mn != null && mx != null ? `${mn}° / ${mx}°` : null} smallValue />;
+    }
+    case 'temp_outside': {
+      const v = d?.outside_temp;
+      return <Cell label="Outside Temp" value={v != null ? v + '°' : null} bar={tempBar(v)} barColor={tempColor(v)} />;
+    }
+    case 'tpms_avg': {
+      const v = tpmsAvg(d?.tpms_pressure_fl, d?.tpms_pressure_fr, d?.tpms_pressure_rl, d?.tpms_pressure_rr);
+      return <Cell label="Tyre Pressure Avg" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
+    }
+    case 'tpms_fl': {
+      const v = d?.tpms_pressure_fl != null ? parseFloat(d.tpms_pressure_fl) : null;
+      return <Cell label="Tyre Pressure FL" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
+    }
+    case 'tpms_fr': {
+      const v = d?.tpms_pressure_fr != null ? parseFloat(d.tpms_pressure_fr) : null;
+      return <Cell label="Tyre Pressure FR" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
+    }
+    case 'tpms_front': {
+      const v = tpmsAvg(d?.tpms_pressure_fl, d?.tpms_pressure_fr);
+      return <Cell label="Tyre Pressure Front" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
+    }
+    case 'tpms_rear': {
+      const v = tpmsAvg(d?.tpms_pressure_rl, d?.tpms_pressure_rr);
+      return <Cell label="Tyre Pressure Rear" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
+    }
+    case 'tpms_rl': {
+      const v = d?.tpms_pressure_rl != null ? parseFloat(d.tpms_pressure_rl) : null;
+      return <Cell label="Tyre Pressure RL" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
+    }
+    case 'tpms_rr': {
+      const v = d?.tpms_pressure_rr != null ? parseFloat(d.tpms_pressure_rr) : null;
+      return <Cell label="Tyre Pressure RR" value={v?.toFixed(1)} unit="bar" bar={tpmsBar(v)} barColor={tpmsColor(v)} />;
     }
 
-    // ── Monthly driving ──
-    case 'monthly_distance':
-      return <Cell label="Distance this month" value={ms?.total_km} unit="km" />;
-    case 'monthly_speed':
-      return <Cell label="Avg speed this month" value={ms?.avg_speed_kmh} unit="km/h" />;
-    case 'monthly_drives':
-      return <Cell label="Drives this month" value={ms?.drives_count} />;
-    case 'monthly_drivetime':
-      return <Cell label="Drive time this month" value={ms?.total_min != null ? driveTimeValue() : null} />;
-    case 'monthly_kwh_per_100':
-      return <Cell label="Consumption this month" value={ms?.avg_kwh_per_100km} unit="kWh/100" />;
-    case 'monthly_kwh_total':
-      return <Cell label="Charged this month" value={ms?.total_kwh} unit="kWh" />;
-
-    // ── Wide ──
+    // ── Activity / Wide ───────────────────────────────────────────────────────
     case 'recent_drives':  return <RecentDrivesWidget data={d} />;
     case 'charge_cost':    return <ChargeCostWidget />;
     case 'states_12h':     return <StatesWidget windowHours={12} />;
     case 'states_24h':     return <StatesWidget windowHours={24} />;
 
-    // ── Link ──
+    // ── Links ─────────────────────────────────────────────────────────────────
     case 'link': return <LinkWidget config={cfg} />;
 
     default: return <div className="text-dim text-xs">{id}</div>;

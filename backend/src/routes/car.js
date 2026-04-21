@@ -108,7 +108,8 @@ router.get('/:carId/data', async (req, res) => {
         CASE WHEN SUM(d.duration_min) > 0
           THEN ROUND((SUM(d.distance) / (SUM(d.duration_min) / 60.0))::numeric, 0)
           ELSE NULL
-        END                                         AS avg_speed_kmh
+        END                                         AS avg_speed_kmh,
+        MAX(d.speed_max)                            AS speed_max
       FROM drives d
       JOIN cars c ON c.id = d.car_id
       WHERE d.car_id = $1
@@ -154,11 +155,35 @@ router.get('/:carId/data', async (req, res) => {
       ORDER BY d.start_date DESC
     `, [carId, process.env.TIMEZONE || 'UTC']);
 
+    const { rows: todayStats } = await pool.query(`
+      SELECT
+        COUNT(*)                                    AS drives_count,
+        ROUND(SUM(d.distance)::numeric, 1)          AS total_km,
+        SUM(d.duration_min)                         AS total_min,
+        MAX(d.speed_max)                            AS speed_max,
+        CASE WHEN SUM(d.duration_min) > 0
+          THEN ROUND((SUM(d.distance) / (SUM(d.duration_min) / 60.0))::numeric, 0)
+          ELSE NULL
+        END                                         AS avg_speed_kmh,
+        CASE WHEN SUM(d.distance) > 0
+          THEN ROUND(
+            (SUM((d.start_rated_range_km - d.end_rated_range_km) * c.efficiency) / SUM(d.distance) * 100)::numeric
+          , 1)
+          ELSE NULL
+        END                                         AS avg_kwh_per_100km
+      FROM drives d
+      JOIN cars c ON c.id = d.car_id
+      WHERE d.car_id = $1
+        AND (d.start_date AT TIME ZONE 'UTC' AT TIME ZONE $2)::date = (NOW() AT TIME ZONE $2)::date
+        AND d.distance > 0.5
+        AND d.end_date IS NOT NULL
+    `, [carId, process.env.TIMEZONE || 'UTC']);
+
     res.json({
       ...row,
-      // During charging, use live temp from charges table (positions only updates while driving)
       outside_temp: row.charging_outside_temp ?? row.outside_temp,
       month_stats: monthStats[0] || null,
+      today_stats: todayStats[0] || null,
       last_drives: lastDrives,
       outside_temp_min: tempStats[0]?.outside_temp_min ?? null,
       outside_temp_max: tempStats[0]?.outside_temp_max ?? null,
