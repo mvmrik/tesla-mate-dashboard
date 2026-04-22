@@ -197,6 +197,12 @@ export async function deleteTrip(id) {
   return r.json();
 }
 
+export async function fetchTripStates(tripId, carId = 1) {
+  const r = await fetch(`${BASE}/trips/${tripId}/states?car_id=${carId}`);
+  if (!r.ok) throw new Error('Failed to load trip states');
+  return r.json();
+}
+
 export async function updateSlotConfig(slotId, config) {
   const r = await fetch(`${BASE}/layout/slots/${slotId}/config`, {
     method: 'PUT',

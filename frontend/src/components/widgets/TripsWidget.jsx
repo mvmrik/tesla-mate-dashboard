@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { fetchActiveTrips, fetchTripHistory, createTrip, stopTrip, deleteTrip } from '../../lib/api.js';
+import { fetchActiveTrips, fetchTripHistory, createTrip, stopTrip, deleteTrip, fetchTripStates } from '../../lib/api.js';
 import { useSettings } from '../../lib/SettingsContext.js';
 import { fmtDateTime } from '../../lib/units.js';
 
@@ -11,6 +11,70 @@ function fmtDur(totalMin) {
   const h = Math.floor(m / 60), rem = m % 60;
   return h > 0 ? `${h}h ${rem > 0 ? rem + 'm' : ''}`.trim() : `${m}m`;
 }
+
+function fmtDurMs(ms) {
+  const min = Math.round(ms / 60000);
+  if (min < 60) return min + 'min';
+  const h = Math.floor(min / 60), m = min % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
+function fmtTs(ms, timeFormat) {
+  return new Date(ms).toLocaleString([], {
+    month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+    hour12: timeFormat === '12h',
+  });
+}
+
+// ── State visualisation config (mirrors StatesWidget) ────────────────────────
+
+const STATE_CFG = {
+  driving:   { label: 'Driving',   color: '#f59e0b' },
+  charging:  { label: 'Charging',  color: '#3b82f6' },
+  asleep:    { label: 'Asleep',    color: '#8b5cf6' },
+  sleeping:  { label: 'Asleep',    color: '#8b5cf6' },
+  online:    { label: 'Online',    color: '#22c55e' },
+  offline:   { label: 'Offline',   color: '#4b5563' },
+  suspended: { label: 'Suspended', color: '#334155' },
+  updating:  { label: 'Updating',  color: '#84cc16' },
+};
+const STATE_PRIORITY = { driving: 0, charging: 1, updating: 1, asleep: 2, sleeping: 2, online: 3, suspended: 4, offline: 5 };
+
+function stateCfg(state) { return STATE_CFG[state] || { label: state, color: '#334155' }; }
+
+function normaliseStates(states, winStart, winEnd) {
+  const segs = states.map(s => ({
+    state: s.state,
+    start: Math.max(new Date(s.start_date).getTime(), winStart),
+    end:   s.end_date ? Math.min(new Date(s.end_date).getTime(), winEnd) : winEnd,
+  })).filter(s => s.start < winEnd && s.end > winStart && s.end > s.start);
+
+  const pts = new Set([winStart, winEnd]);
+  segs.forEach(s => { pts.add(s.start); pts.add(s.end); });
+  const boundaries = [...pts].sort((a, b) => a - b);
+
+  const result = [];
+  for (let i = 0; i < boundaries.length - 1; i++) {
+    const iStart = boundaries[i], iEnd = boundaries[i + 1];
+    let best = null;
+    for (const s of segs) {
+      if (s.start <= iStart && s.end >= iEnd) {
+        const p = STATE_PRIORITY[s.state] ?? 6;
+        if (best === null || p < (STATE_PRIORITY[best.state] ?? 6)) best = s;
+      }
+    }
+    const state = best ? best.state : 'offline';
+    if (result.length && result[result.length - 1].state === state) {
+      result[result.length - 1].end = iEnd;
+    } else {
+      result.push({ state, start: iStart, end: iEnd });
+    }
+  }
+  return result;
+}
+
+// ── StatPill ─────────────────────────────────────────────────────────────────
 
 function StatPill({ label, value, unit }) {
   if (value == null || value === '' || +value === 0) return null;
@@ -24,16 +88,106 @@ function StatPill({ label, value, unit }) {
   );
 }
 
+// ── Trip states modal (opens when clicking trip name) ─────────────────────────
+
+function TripStatesModal({ tripId, carId = 1, onClose, timeFormat }) {
+  const [data,    setData]    = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(null);
+
+  useEffect(() => {
+    fetchTripStates(tripId, carId)
+      .then(setData)
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [tripId, carId]);
+
+  return (
+    <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4"
+         onClick={onClose}>
+      <div className="bg-surface border border-border rounded-xl w-full max-w-lg max-h-[82vh] flex flex-col"
+           onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 pb-3 border-b border-border flex-shrink-0">
+          {loading ? (
+            <span className="text-dim text-sm">Loading...</span>
+          ) : data ? (
+            <div>
+              <span className="font-semibold text-slate-100">{data.trip.name}</span>
+              <p className="text-xs text-dim mt-0.5">
+                {fmtDateTime(data.trip.start_date, timeFormat)}
+                {' → '}
+                {data.trip.end_date ? fmtDateTime(data.trip.end_date, timeFormat) : 'now'}
+              </p>
+            </div>
+          ) : (
+            <span className="text-danger text-sm">{error || 'Error'}</span>
+          )}
+          <button onClick={onClose} className="text-dim hover:text-slate-300 text-lg leading-none ml-4 flex-shrink-0">✕</button>
+        </div>
+
+        {data && (() => {
+          const winStart = new Date(data.trip.start_date).getTime();
+          const winEnd   = data.trip.end_date ? new Date(data.trip.end_date).getTime() : Date.now();
+          const segs     = normaliseStates(data.states, winStart, winEnd);
+          const total    = winEnd - winStart;
+
+          return (
+            <>
+              {/* Timeline bar */}
+              <div className="px-5 pt-4 pb-1 flex-shrink-0">
+                <div className="w-full rounded-md overflow-hidden flex" style={{ height: '1.2rem', background: '#0f172a' }}>
+                  {segs.map((seg, i) => (
+                    <div key={i}
+                         style={{ width: Math.max(0.3, (seg.end - seg.start) / total * 100) + '%',
+                                  background: stateCfg(seg.state).color, flexShrink: 0 }}
+                         className="h-full" />
+                  ))}
+                </div>
+              </div>
+
+              {/* State list */}
+              <div className="overflow-y-auto flex-1 px-3 pb-3 pt-1">
+                {segs.length === 0 && (
+                  <p className="text-center text-dim text-sm py-6">No data for this trip yet</p>
+                )}
+                {segs.map((seg, i) => {
+                  const c = stateCfg(seg.state);
+                  const isNow = !data.trip.end_date && seg.end >= Date.now() - 60000;
+                  return (
+                    <div key={i} className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted/40">
+                      <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: c.color }} />
+                      <span className="text-xs text-dim flex-shrink-0 w-40">
+                        {fmtTs(seg.start, timeFormat)} → {isNow ? 'now' : fmtTs(seg.end, timeFormat)}
+                      </span>
+                      <span className="text-sm text-slate-200 flex-1">{c.label}</span>
+                      <span className="text-xs text-dim">{fmtDurMs(seg.end - seg.start)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          );
+        })()}
+      </div>
+    </div>
+  );
+}
+
 // ── Trip row (compact, used in widget) ───────────────────────────────────────
 
-function ActiveTripCard({ trip, onStop, timeFormat }) {
+function ActiveTripCard({ trip, onStop, onViewStates, timeFormat }) {
   const s = trip.stats || {};
   return (
     <div className="flex flex-col gap-1.5 bg-muted/60 rounded-lg px-3 py-2.5">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="w-1.5 h-1.5 rounded-full bg-success flex-shrink-0 animate-pulse" />
-          <span className="text-sm font-semibold text-slate-100 truncate">{trip.name}</span>
+          <button onClick={() => onViewStates(trip.id)}
+                  className="text-sm font-semibold text-slate-100 truncate hover:text-accent transition-colors text-left">
+            {trip.name}
+          </button>
         </div>
         <button onClick={() => onStop(trip.id)}
                 className="text-[0.65rem] px-2 py-0.5 rounded border border-danger/40 text-danger hover:bg-danger/20 transition-colors flex-shrink-0 whitespace-nowrap">
@@ -56,8 +210,9 @@ function ActiveTripCard({ trip, onStop, timeFormat }) {
 // ── History modal ─────────────────────────────────────────────────────────────
 
 function TripModal({ activeTrips, onClose, onStop, onDelete, onRefresh, timeFormat }) {
-  const [history, setHistory]   = useState(null);
-  const [loading, setLoading]   = useState(true);
+  const [history,          setHistory]          = useState(null);
+  const [loading,          setLoading]          = useState(true);
+  const [statesTripId,     setStatesTripId]     = useState(null);
 
   useEffect(() => {
     fetchTripHistory(1)
@@ -74,13 +229,12 @@ function TripModal({ activeTrips, onClose, onStop, onDelete, onRefresh, timeForm
   const handleDelete = async (id) => {
     if (!confirm('Delete this trip?')) return;
     await onDelete(id);
-    // Remove from history list locally
     setHistory(h => h?.filter(t => t.id !== id));
     onRefresh();
   };
 
-  const allActive = activeTrips || [];
-  const allHistory = history || [];
+  const allActive  = activeTrips || [];
+  const allHistory = history     || [];
 
   const cols = ['Name', 'Started', 'Ended', 'km', 'Time', 'Avg km/h', 'Max km/h', 'kWh/100', ''];
 
@@ -91,7 +245,10 @@ function TripModal({ activeTrips, onClose, onStop, onDelete, onRefresh, timeForm
         <td className="py-2 pr-3 text-slate-200 font-semibold whitespace-nowrap max-w-[140px] truncate">
           <span className="flex items-center gap-1.5">
             {isActive && <span className="w-1.5 h-1.5 rounded-full bg-success flex-shrink-0 animate-pulse" />}
-            {trip.name}
+            <button onClick={() => setStatesTripId(trip.id)}
+                    className="hover:text-accent transition-colors truncate text-left">
+              {trip.name}
+            </button>
           </span>
         </td>
         <td className="py-2 pr-3 text-dim text-xs whitespace-nowrap">{fmtDateTime(trip.start_date, timeFormat)}</td>
@@ -156,6 +313,14 @@ function TripModal({ activeTrips, onClose, onStop, onDelete, onRefresh, timeForm
           )}
         </div>
       </div>
+
+      {statesTripId != null && (
+        <TripStatesModal
+          tripId={statesTripId}
+          onClose={() => setStatesTripId(null)}
+          timeFormat={timeFormat}
+        />
+      )}
     </div>
   );
 }
@@ -164,17 +329,22 @@ function TripModal({ activeTrips, onClose, onStop, onDelete, onRefresh, timeForm
 
 export default function TripsWidget() {
   const { timeFormat } = useSettings();
-  const [trips,    setTrips]    = useState(null);
-  const [newName,  setNewName]  = useState('');
-  const [adding,   setAdding]   = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [showModal, setShowModal] = useState(false);
+  const [trips,        setTrips]        = useState(null);
+  const [newName,      setNewName]      = useState('');
+  const [adding,       setAdding]       = useState(false);
+  const [creating,     setCreating]     = useState(false);
+  const [showModal,    setShowModal]    = useState(false);
+  const [statesTripId, setStatesTripId] = useState(null);
 
   const load = useCallback(() => {
     fetchActiveTrips(1).then(setTrips).catch(() => setTrips([]));
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    const iv = setInterval(load, 60000);
+    return () => clearInterval(iv);
+  }, [load]);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -248,7 +418,7 @@ export default function TripsWidget() {
             <span className="text-2xl">🗺️</span>
             <p className="text-sm text-dim">No active trips</p>
             <p className="text-xs text-dim/60">Press + New Trip to start tracking</p>
-            {(trips !== null) && (
+            {trips !== null && (
               <button onClick={() => setShowModal(true)}
                       className="mt-1 text-xs text-accent hover:text-hi transition-colors">
                 View history →
@@ -257,7 +427,10 @@ export default function TripsWidget() {
           </div>
         )}
         {active.map(trip => (
-          <ActiveTripCard key={trip.id} trip={trip} onStop={handleStop} timeFormat={timeFormat} />
+          <ActiveTripCard key={trip.id} trip={trip}
+                          onStop={handleStop}
+                          onViewStates={id => setStatesTripId(id)}
+                          timeFormat={timeFormat} />
         ))}
       </div>
 
@@ -268,6 +441,14 @@ export default function TripsWidget() {
           onStop={handleStop}
           onDelete={handleDelete}
           onRefresh={load}
+          timeFormat={timeFormat}
+        />
+      )}
+
+      {statesTripId != null && (
+        <TripStatesModal
+          tripId={statesTripId}
+          onClose={() => setStatesTripId(null)}
           timeFormat={timeFormat}
         />
       )}

@@ -107,6 +107,47 @@ router.put('/:id/stop', (req, res) => {
   res.json({ ok: true });
 });
 
+// GET /api/trips/:id/states — states/drives/charging during a trip
+router.get('/:id/states', async (req, res) => {
+  const tripId = parseInt(req.params.id);
+  const carId  = parseInt(req.query.car_id) || 1;
+  try {
+    const db   = getSqlite();
+    const trip = db.prepare('SELECT * FROM trips WHERE id = ?').get(tripId);
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+
+    const tripStart = trip.start_date;
+    const tripEnd   = trip.end_date || new Date().toISOString();
+    const pool = getPool();
+    const { rows } = await pool.query(`
+      SELECT state::text, start_date, end_date FROM states
+      WHERE car_id = $1
+        AND start_date <= $3::timestamptz
+        AND (end_date IS NULL OR end_date >= $2::timestamptz)
+
+      UNION ALL
+
+      SELECT 'driving'::text AS state, start_date, end_date FROM drives
+      WHERE car_id = $1
+        AND start_date <= $3::timestamptz
+        AND (end_date IS NULL OR end_date >= $2::timestamptz)
+
+      UNION ALL
+
+      SELECT 'charging'::text AS state, start_date, end_date FROM charging_processes
+      WHERE car_id = $1
+        AND start_date <= $3::timestamptz
+        AND (end_date IS NULL OR end_date >= $2::timestamptz)
+
+      ORDER BY start_date
+    `, [carId, tripStart, tripEnd]);
+
+    res.json({ trip, states: rows });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // DELETE /api/trips/:id
 router.delete('/:id', (req, res) => {
   const db = getSqlite();
