@@ -25,7 +25,7 @@ import LinkWidget         from './components/widgets/LinkWidget.jsx';
 import Cell               from './components/Cell.jsx';
 import { batteryColor, tpmsColor, tpmsBar, tempColor, tempBar } from './components/Cell.jsx';
 
-const VERSION = '1.7.1';
+const VERSION = '1.7.2';
 
 function tpmsAvg(...vals) {
   const v = vals.filter(x => x != null).map(Number);

@@ -133,10 +133,22 @@ function TripStatesModal({ tripId, carId = 1, onClose, timeFormat }) {
           const segs     = normaliseStates(data.states, winStart, winEnd);
           const total    = winEnd - winStart;
 
+          // Aggregate totals per state type
+          const totals = {};
+          for (const seg of segs) {
+            const key = STATE_CFG[seg.state] ? seg.state : 'offline';
+            const canonical = (key === 'sleeping') ? 'asleep' : key;
+            totals[canonical] = (totals[canonical] || 0) + (seg.end - seg.start);
+          }
+          const summaryOrder = ['driving', 'charging', 'online', 'asleep', 'suspended', 'updating', 'offline'];
+          const summaryRows = summaryOrder.filter(k => totals[k] > 0).map(k => ({
+            state: k, ms: totals[k], ...stateCfg(k),
+          }));
+
           return (
             <>
               {/* Timeline bar */}
-              <div className="px-5 pt-4 pb-1 flex-shrink-0">
+              <div className="px-5 pt-4 pb-3 flex-shrink-0">
                 <div className="w-full rounded-md overflow-hidden flex" style={{ height: '1.2rem', background: '#0f172a' }}>
                   {segs.map((seg, i) => (
                     <div key={i}
@@ -147,8 +159,23 @@ function TripStatesModal({ tripId, carId = 1, onClose, timeFormat }) {
                 </div>
               </div>
 
+              {/* Summary */}
+              {summaryRows.length > 0 && (
+                <div className="px-5 pb-3 flex-shrink-0 flex flex-wrap gap-x-5 gap-y-1.5">
+                  {summaryRows.map(r => (
+                    <div key={r.state} className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: r.color }} />
+                      <span className="text-xs text-dim">{r.label}</span>
+                      <span className="text-xs font-semibold text-slate-200">{fmtDurMs(r.ms)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <hr className="border-border mx-5 flex-shrink-0" />
+
               {/* State list */}
-              <div className="overflow-y-auto flex-1 px-3 pb-3 pt-1">
+              <div className="overflow-y-auto flex-1 px-3 pb-3 pt-2">
                 {segs.length === 0 && (
                   <p className="text-center text-dim text-sm py-6">No data for this trip yet</p>
                 )}

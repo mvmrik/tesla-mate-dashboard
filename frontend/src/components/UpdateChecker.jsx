@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const CURRENT = '1.7.1';
+const CURRENT = '1.7.2';
 const VERSION_URL = 'https://raw.githubusercontent.com/mvmrik/tesla-mate-dashboard/main/VERSION';
 
 function semverGt(a, b) {
