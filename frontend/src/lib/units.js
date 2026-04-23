@@ -26,6 +26,12 @@ export function fmtConsumption(kwhPer100km, unit) {
 }
 export function consumptionLabel(unit) { return unit === 'mi' ? 'kWh/100mi' : 'kWh/100km'; }
 
+export function fmtElev(m, unit) {
+  if (m == null) return null;
+  return unit === 'mi' ? Math.round(m * 3.28084) : m;
+}
+export function elevLabel(unit) { return unit === 'mi' ? 'ft' : 'm'; }
+
 export function fmtTime(iso, timeFormat) {
   if (!iso) return '—';
   return new Date(iso).toLocaleTimeString([], {
