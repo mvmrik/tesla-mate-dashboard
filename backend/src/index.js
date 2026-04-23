@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { testConnection } from './db/postgres.js';
 import { getSqlite } from './db/sqlite.js';
 import carRouter from './routes/car.js';
@@ -16,6 +16,9 @@ import layoutRouter from './routes/layout.js';
 import tripsRouter  from './routes/trips.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const VERSION = (() => {
+  try { return readFileSync(path.join(__dirname, '../VERSION'), 'utf8').trim(); } catch { return '0.0.0'; }
+})();
 const app  = express();
 const PORT = process.env.PORT || 3001;
 
@@ -37,6 +40,7 @@ app.get('/api/health', async (req, res) => {
   getSqlite(); // ensure SQLite is init'd
   res.json({
     status: 'ok',
+    version: VERSION,
     postgres: pg.ok ? 'connected' : 'error',
     postgres_error: pg.error || null,
     timezone: process.env.TIMEZONE || 'UTC',
