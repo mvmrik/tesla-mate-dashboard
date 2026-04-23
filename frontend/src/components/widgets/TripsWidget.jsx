@@ -7,6 +7,7 @@ import {
   fmtSpeed, speedLabel,
   fmtTemp, tempLabel,
   fmtConsumption, consumptionLabel,
+  fmtElev, elevLabel,
 } from '../../lib/units.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -250,13 +251,13 @@ function TripStatesModal({ tripId, carId = 1, onClose, timeFormat }) {
                     {hasElev && (
                       <StatRow
                         label="Elevation (avg / min / max)"
-                        value={`${s.elevation_avg ?? '—'} / ${s.elevation_min ?? '—'} / ${s.elevation_max ?? '—'} m`}
+                        value={`${fmtElev(s.elevation_avg, distanceUnit) ?? '—'} / ${fmtElev(s.elevation_min, distanceUnit) ?? '—'} / ${fmtElev(s.elevation_max, distanceUnit) ?? '—'} ${elevLabel(distanceUnit)}`}
                       />
                     )}
                     {hasAscent && (
                       <StatRow
                         label="Ascent / Descent"
-                        value={`+${s.total_ascent ?? '—'} / −${s.total_descent ?? '—'} m`}
+                        value={`+${fmtElev(s.total_ascent, distanceUnit) ?? '—'} / −${fmtElev(s.total_descent, distanceUnit) ?? '—'} ${elevLabel(distanceUnit)}`}
                       />
                     )}
                     {hasBattery && (
@@ -368,7 +369,7 @@ function ActiveTripCard({ trip, onStop, onViewStates, timeFormat }) {
         <StatPill label={consumptionLabel(distanceUnit)} value={fmtConsumption(s.avg_kwh_per_100km, distanceUnit)} />
       </div>
       <span className="text-[0.6rem] text-dim">Started {fmtDateTime(trip.start_date, timeFormat)}
-        {trip.start_odometer != null && ` · ${trip.start_odometer} km`}</span>
+        {trip.start_odometer != null && ` · ${fmtDist(trip.start_odometer, distanceUnit)} ${distLabel(distanceUnit)}`}</span>
     </div>
   );
 }
@@ -376,6 +377,7 @@ function ActiveTripCard({ trip, onStop, onViewStates, timeFormat }) {
 // ── History modal ─────────────────────────────────────────────────────────────
 
 function TripModal({ activeTrips, onClose, onStop, onDelete, onRefresh, timeFormat }) {
+  const { distanceUnit } = useSettings();
   const [history,          setHistory]          = useState(null);
   const [loading,          setLoading]          = useState(true);
   const [statesTripId,     setStatesTripId]     = useState(null);
@@ -402,7 +404,7 @@ function TripModal({ activeTrips, onClose, onStop, onDelete, onRefresh, timeForm
   const allActive  = activeTrips || [];
   const allHistory = history     || [];
 
-  const cols = ['Name', 'Started', 'Ended', 'km', 'Time', 'Avg km/h', 'Max km/h', 'kWh/100', ''];
+  const cols = ['Name', 'Started', 'Ended', distLabel(distanceUnit), 'Time', `Avg ${speedLabel(distanceUnit)}`, `Max ${speedLabel(distanceUnit)}`, consumptionLabel(distanceUnit), ''];
 
   const TripRow = ({ trip, isActive }) => {
     const s = trip.stats || {};
@@ -421,11 +423,11 @@ function TripModal({ activeTrips, onClose, onStop, onDelete, onRefresh, timeForm
         <td className="py-2 pr-3 text-dim text-xs whitespace-nowrap">
           {isActive ? <span className="text-success text-xs">Active</span> : fmtDateTime(trip.end_date, timeFormat)}
         </td>
-        <td className="py-2 pr-3 text-slate-200 font-semibold">{s.total_km ?? '—'}</td>
+        <td className="py-2 pr-3 text-slate-200 font-semibold">{fmtDist(s.total_km, distanceUnit) ?? '—'}</td>
         <td className="py-2 pr-3 text-dim whitespace-nowrap">{fmtDur(s.total_min)}</td>
-        <td className="py-2 pr-3 text-dim">{s.avg_speed_kmh ?? '—'}</td>
-        <td className="py-2 pr-3 text-dim">{s.speed_max ?? '—'}</td>
-        <td className="py-2 pr-3 text-dim">{s.avg_kwh_per_100km ?? '—'}</td>
+        <td className="py-2 pr-3 text-dim">{fmtSpeed(s.avg_speed_kmh, distanceUnit) ?? '—'}</td>
+        <td className="py-2 pr-3 text-dim">{fmtSpeed(s.speed_max, distanceUnit) ?? '—'}</td>
+        <td className="py-2 pr-3 text-dim">{fmtConsumption(s.avg_kwh_per_100km, distanceUnit) ?? '—'}</td>
         <td className="py-2 text-right whitespace-nowrap">
           {isActive && (
             <button onClick={() => handleStop(trip.id)}
