@@ -21,6 +21,7 @@ RUN npm install --omit=dev
 
 # Backend source
 COPY backend/src ./src
+COPY VERSION ./VERSION
 
 # Frontend build output → served as static files by express
 COPY --from=frontend-build /app/frontend/dist ./public

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
-const CURRENT = '1.7.2';
 const VERSION_URL = 'https://raw.githubusercontent.com/mvmrik/tesla-mate-dashboard/main/VERSION';
+const BASE = import.meta.env.VITE_API_URL || '/api';
 
 function semverGt(a, b) {
   const pa = a.trim().replace(/^v/, '').split('.').map(Number);
@@ -13,22 +13,27 @@ function semverGt(a, b) {
   return false;
 }
 
-const CMD = 'docker compose pull && docker compose up -d';
+const CMD = 'docker compose pull teslamate-dashboard && docker compose up -d teslamate-dashboard';
 
 export default function UpdateChecker() {
+  const [current,   setCurrent]   = useState(null);
   const [latest,    setLatest]    = useState(null);
   const [showCmd,   setShowCmd]   = useState(false);
   const [copied,    setCopied]    = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
+    fetch(`${BASE}/health`)
+      .then(r => r.json())
+      .then(d => { if (d.version) setCurrent(d.version); })
+      .catch(() => {});
     fetch(VERSION_URL)
       .then(r => r.text())
       .then(v => { if (v.trim()) setLatest(v.trim()); })
       .catch(() => {});
   }, []);
 
-  if (!latest || !semverGt(latest, CURRENT) || dismissed) return null;
+  if (!latest || !current || !semverGt(latest, current) || dismissed) return null;
 
   const copy = () => {
     navigator.clipboard.writeText(CMD).then(() => {
