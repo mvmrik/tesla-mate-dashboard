@@ -158,7 +158,7 @@ networks:
 
 ## Updating to a new version
 
-When a new version is released, run:
+When a new version is released, run this in the folder where your `docker-compose.yml` is:
 
 ```bash
 docker compose pull teslamate-dashboard
