@@ -25,7 +25,6 @@ import LinkWidget         from './components/widgets/LinkWidget.jsx';
 import Cell               from './components/Cell.jsx';
 import { batteryColor, tpmsColor, tpmsBar, tempColor, tempBar } from './components/Cell.jsx';
 
-const VERSION = '1.7.2';
 
 function tpmsAvg(...vals) {
   const v = vals.filter(x => x != null).map(Number);
@@ -171,6 +170,7 @@ export default function App() {
   const [carData,       setCarData]       = useState(null);
   const [loading,       setLoading]       = useState(true);
   const [dbOk,          setDbOk]          = useState(true);
+  const [version,       setVersion]       = useState(null);
   const [blocks,        setBlocks]        = useState([]);
   const [editMode,      setEditMode]      = useState(false);
   const [showSettings,  setShowSettings]  = useState(false);
@@ -185,6 +185,7 @@ export default function App() {
       const [data, health] = await Promise.all([fetchCarData(1), fetchHealth()]);
       setCarData(data);
       setDbOk(health.postgres === 'connected');
+      if (health.version) setVersion(health.version);
     } catch {
       setDbOk(false);
     } finally {
@@ -341,7 +342,7 @@ export default function App() {
         )}
 
         <footer className="mt-10 text-center flex flex-col gap-1">
-          <span className="text-xs text-[#2d2d3d]">v{VERSION}</span>
+          {version && <span className="text-xs text-[#2d2d3d]">v{version}</span>}
           <span className="text-xs text-dim">
             Made with ♥ by{' '}
             <a href="https://github.com/mvmrik" target="_blank" rel="noopener"
