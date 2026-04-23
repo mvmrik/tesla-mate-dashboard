@@ -18,6 +18,7 @@ It shows things like:
 - 📊 Monthly driving statistics
 - 🗺️ Recent drives
 - 💶 Charging cost calculator with day/night electricity tariffs
+- 🧭 Trip tracking with detailed per-trip statistics
 
 ---
 
@@ -166,6 +167,50 @@ docker compose up -d teslamate-dashboard
 
 ---
 
+## Widgets
+
+You can show or hide widgets by clicking **⊞ Widgets** in the top right corner. The layout is fully customisable — drag to reorder, resize columns and rows.
+
+| Widget | Description |
+|---|---|
+| Battery & Range | Battery percentage, rated and estimated range, odometer |
+| Tyre Pressures | All four tyres in bar, with colour warnings if low |
+| Temperature | Outside and inside temperature, climate status |
+| Last Charge | End battery level, energy added, date |
+| Monthly Stats | Drives, distance, time, energy used, efficiency |
+| Recent Drives | Drives from today and yesterday |
+| Charging Cost | Day/night tariff cost calculator |
+| Trips | Track multi-day trips with detailed statistics |
+
+---
+
+## Trip tracking
+
+The **Trips** widget lets you group drives into a single trip (e.g. a holiday or a road trip spanning multiple days).
+
+**How to use:**
+1. Press **+ New Trip** and give it a name before you leave
+2. The widget shows live stats for the active trip: distance, drive time, and consumption
+3. Tap the trip name to open the detailed view, which shows:
+   - Distance and number of charging stops
+   - Speed (average and maximum)
+   - Power (maximum and maximum regeneration)
+   - Consumption (average per 100 km/mi and total kWh used)
+   - Outside temperature (average, minimum, maximum)
+   - Inside temperature while driving (average, minimum, maximum)
+   - Inside temperature while parked (average, minimum, maximum)
+   - Elevation (average, minimum, maximum)
+   - Total ascent and descent
+   - Battery level (minimum and maximum reached)
+   - Charging time and energy added
+   - AC charging efficiency
+   - Full state timeline (driving, charging, sleeping, etc.)
+4. Press **Stop** when the trip is done
+
+Trip data is stored locally in the container volume and is never lost on restart.
+
+---
+
 ## Charging cost calculator
 
 This is a unique feature not available in TeslaMate or Grafana.
@@ -191,23 +236,7 @@ Your tariff settings are saved locally inside the container and never sent anywh
 |---|---|---|---|
 | `DATABASE_URL` | ✅ Yes | — | Connection to your TeslaMate PostgreSQL database |
 | `TIMEZONE` | ❌ No | `UTC` | Your local timezone (e.g. `Europe/Sofia`, `Europe/London`) |
-| `PORT` | ❌ No | `3000` | Internal port (do not change) |
-
----
-
-## Widgets
-
-You can show or hide widgets by clicking **⊞ Widgets** in the top right corner.
-
-| Widget | Description |
-|---|---|
-| Battery & Range | Battery percentage, rated and estimated range, odometer |
-| Tyre Pressures | All four tyres in bar, with colour warnings if low |
-| Temperature | Outside and inside temperature, climate status |
-| Last Charge | End battery level, energy added, date |
-| Monthly Stats | Drives, distance, time, energy used, efficiency |
-| Recent Drives | Drives from today and yesterday |
-| Charging Cost | Day/night tariff cost calculator |
+| `PORT` | ❌ No | `3000` | Internal port (do not change unless you know what you're doing) |
 
 ---
 
