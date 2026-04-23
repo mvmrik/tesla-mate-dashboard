@@ -195,9 +195,9 @@ function TripStatesModal({ tripId, carId = 1, onClose, timeFormat }) {
           const hasCharge     = s.charge_min > 0;
 
           return (
-            <>
+            <div className="overflow-y-auto flex-1">
               {/* Stats table */}
-              <div className="px-5 pt-3 pb-3 flex-shrink-0">
+              <div className="px-5 pt-3 pb-3">
                 <table className="w-full">
                   <tbody>
                     <StatRow
@@ -286,10 +286,10 @@ function TripStatesModal({ tripId, carId = 1, onClose, timeFormat }) {
                 </table>
               </div>
 
-              <hr className="border-border mx-5 flex-shrink-0" />
+              <hr className="border-border mx-5" />
 
               {/* Timeline bar */}
-              <div className="px-5 pt-3 pb-2 flex-shrink-0">
+              <div className="px-5 pt-3 pb-2">
                 <div className="w-full rounded-md overflow-hidden flex" style={{ height: '1.2rem', background: '#0f172a' }}>
                   {segs.map((seg, i) => (
                     <div key={i}
@@ -302,7 +302,7 @@ function TripStatesModal({ tripId, carId = 1, onClose, timeFormat }) {
 
               {/* Summary */}
               {summaryRows.length > 0 && (
-                <div className="px-5 pb-3 flex-shrink-0 flex flex-wrap gap-x-5 gap-y-1.5">
+                <div className="px-5 pb-3 flex flex-wrap gap-x-5 gap-y-1.5">
                   {summaryRows.map(r => (
                     <div key={r.state} className="flex items-center gap-1.5">
                       <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: r.color }} />
@@ -313,10 +313,10 @@ function TripStatesModal({ tripId, carId = 1, onClose, timeFormat }) {
                 </div>
               )}
 
-              <hr className="border-border mx-5 flex-shrink-0" />
+              <hr className="border-border mx-5" />
 
               {/* State list */}
-              <div className="overflow-y-auto flex-1 px-3 pb-3 pt-2">
+              <div className="px-3 pb-3 pt-2">
                 {segs.length === 0 && (
                   <p className="text-center text-dim text-sm py-6">No data for this trip yet</p>
                 )}
@@ -335,7 +335,7 @@ function TripStatesModal({ tripId, carId = 1, onClose, timeFormat }) {
                   );
                 })}
               </div>
-            </>
+            </div>
           );
         })()}
       </div>
