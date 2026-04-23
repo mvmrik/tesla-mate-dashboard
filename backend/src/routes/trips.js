@@ -119,30 +119,106 @@ router.get('/:id/states', async (req, res) => {
     const tripStart = trip.start_date;
     const tripEnd   = trip.end_date || new Date().toISOString();
     const pool = getPool();
-    const { rows } = await pool.query(`
-      SELECT state::text, start_date, end_date FROM states
-      WHERE car_id = $1
-        AND start_date <= $3::timestamptz
-        AND (end_date IS NULL OR end_date >= $2::timestamptz)
 
-      UNION ALL
+    const [{ rows }, { rows: driveStats }, { rows: elevStats }, { rows: chargeStats }] = await Promise.all([
+      pool.query(`
+        SELECT state::text, start_date, end_date FROM states
+        WHERE car_id = $1
+          AND start_date <= $3::timestamptz
+          AND (end_date IS NULL OR end_date >= $2::timestamptz)
 
-      SELECT 'driving'::text AS state, start_date, end_date FROM drives
-      WHERE car_id = $1
-        AND start_date <= $3::timestamptz
-        AND (end_date IS NULL OR end_date >= $2::timestamptz)
+        UNION ALL
 
-      UNION ALL
+        SELECT 'driving'::text AS state, start_date, end_date FROM drives
+        WHERE car_id = $1
+          AND start_date <= $3::timestamptz
+          AND (end_date IS NULL OR end_date >= $2::timestamptz)
 
-      SELECT 'charging'::text AS state, start_date, end_date FROM charging_processes
-      WHERE car_id = $1
-        AND start_date <= $3::timestamptz
-        AND (end_date IS NULL OR end_date >= $2::timestamptz)
+        UNION ALL
 
-      ORDER BY start_date
-    `, [carId, tripStart, tripEnd]);
+        SELECT 'charging'::text AS state, start_date, end_date FROM charging_processes
+        WHERE car_id = $1
+          AND start_date <= $3::timestamptz
+          AND (end_date IS NULL OR end_date >= $2::timestamptz)
 
-    res.json({ trip, states: rows });
+        ORDER BY start_date
+      `, [carId, tripStart, tripEnd]),
+
+      pool.query(`
+        SELECT
+          ROUND(SUM(d.distance)::numeric, 1)          AS total_km,
+          SUM(d.duration_min)                         AS total_min,
+          MAX(d.speed_max)                            AS speed_max,
+          CASE WHEN SUM(d.duration_min) > 0
+            THEN ROUND((SUM(d.distance) / (SUM(d.duration_min) / 60.0))::numeric, 0)
+            ELSE NULL
+          END                                         AS avg_speed_kmh,
+          CASE WHEN SUM(d.distance) > 0
+            THEN ROUND(
+              (SUM((d.start_rated_range_km - d.end_rated_range_km) * c.efficiency)
+               / SUM(d.distance) * 100)::numeric, 1)
+            ELSE NULL
+          END                                         AS avg_kwh_per_100km,
+          ROUND(SUM((d.start_rated_range_km - d.end_rated_range_km) * c.efficiency)::numeric, 1) AS total_kwh,
+          ROUND(AVG(d.outside_temp_avg)::numeric, 1)  AS avg_outside_temp,
+          ROUND(MIN(d.outside_temp_avg)::numeric, 1)  AS min_outside_temp,
+          ROUND(MAX(d.outside_temp_avg)::numeric, 1)  AS max_outside_temp,
+          MAX(d.power_max)                            AS power_max_kw,
+          MIN(d.power_min)                            AS power_min_kw,
+          SUM(d.ascent)                               AS total_ascent,
+          SUM(d.descent)                              AS total_descent
+        FROM drives d
+        JOIN cars c ON c.id = d.car_id
+        WHERE d.car_id = $1
+          AND d.end_date IS NOT NULL
+          AND d.end_date >= $2::timestamptz
+          AND d.start_date <= $3::timestamptz
+          AND d.distance > 0.1
+      `, [carId, tripStart, tripEnd]),
+
+      pool.query(`
+        SELECT
+          ROUND(MIN(p.elevation)::numeric, 0)                                              AS elevation_min,
+          ROUND(MAX(p.elevation)::numeric, 0)                                              AS elevation_max,
+          ROUND(AVG(p.elevation)::numeric, 0)                                              AS elevation_avg,
+          MIN(p.battery_level)                                                             AS battery_min,
+          MAX(p.battery_level)                                                             AS battery_max,
+          ROUND(AVG(p.inside_temp) FILTER (WHERE p.drive_id IS NOT NULL)::numeric, 1)     AS avg_inside_temp_driving,
+          ROUND(MIN(p.inside_temp) FILTER (WHERE p.drive_id IS NOT NULL)::numeric, 1)     AS min_inside_temp_driving,
+          ROUND(MAX(p.inside_temp) FILTER (WHERE p.drive_id IS NOT NULL)::numeric, 1)     AS max_inside_temp_driving,
+          ROUND(AVG(p.inside_temp) FILTER (WHERE p.drive_id IS NULL)::numeric, 1)         AS avg_inside_temp_parked,
+          ROUND(MIN(p.inside_temp) FILTER (WHERE p.drive_id IS NULL)::numeric, 1)         AS min_inside_temp_parked,
+          ROUND(MAX(p.inside_temp) FILTER (WHERE p.drive_id IS NULL)::numeric, 1)         AS max_inside_temp_parked
+        FROM positions p
+        WHERE p.car_id = $1
+          AND p.date >= $2::timestamptz
+          AND p.date <= $3::timestamptz
+      `, [carId, tripStart, tripEnd]),
+
+      pool.query(`
+        SELECT
+          COUNT(*)                                                                                         AS charge_count,
+          ROUND(SUM(EXTRACT(EPOCH FROM (COALESCE(end_date, NOW()) - start_date)) / 60)::numeric, 0)::int  AS charge_min,
+          ROUND(COALESCE(SUM(charge_energy_added), 0)::numeric, 1)                                       AS total_charge_kwh,
+          CASE WHEN COALESCE(SUM(charge_energy_used), 0) > 0
+            THEN ROUND((SUM(charge_energy_added) / SUM(charge_energy_used) * 100)::numeric, 1)
+            ELSE NULL
+          END                                                                                             AS charge_efficiency
+        FROM charging_processes
+        WHERE car_id = $1
+          AND start_date <= $3::timestamptz
+          AND (end_date IS NULL OR end_date >= $2::timestamptz)
+          AND charge_energy_used IS NOT NULL
+      `, [carId, tripStart, tripEnd]),
+    ]);
+
+    const stats = {
+      ...driveStats[0],
+      ...elevStats[0],
+      ...chargeStats[0],
+    };
+
+    res.json({ trip, states: rows, stats });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

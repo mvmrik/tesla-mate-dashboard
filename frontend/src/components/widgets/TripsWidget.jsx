@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { fetchActiveTrips, fetchTripHistory, createTrip, stopTrip, deleteTrip, fetchTripStates } from '../../lib/api.js';
 import { useSettings } from '../../lib/SettingsContext.js';
-import { fmtDateTime } from '../../lib/units.js';
+import {
+  fmtDateTime,
+  fmtDist, distLabel,
+  fmtSpeed, speedLabel,
+  fmtTemp, tempLabel,
+  fmtConsumption, consumptionLabel,
+} from '../../lib/units.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -90,7 +96,18 @@ function StatPill({ label, value, unit }) {
 
 // ── Trip states modal (opens when clicking trip name) ─────────────────────────
 
+function StatRow({ label, value }) {
+  if (value == null || value === '') return null;
+  return (
+    <tr>
+      <td className="text-dim py-0.5 pr-4 align-top text-[0.7rem] leading-snug w-[48%]">{label}</td>
+      <td className="text-slate-200 font-semibold py-0.5 text-[0.7rem] leading-snug">{value}</td>
+    </tr>
+  );
+}
+
 function TripStatesModal({ tripId, carId = 1, onClose, timeFormat }) {
+  const { distanceUnit, tempUnit } = useSettings();
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(null);
@@ -105,7 +122,7 @@ function TripStatesModal({ tripId, carId = 1, onClose, timeFormat }) {
   return (
     <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4"
          onClick={onClose}>
-      <div className="bg-surface border border-border rounded-xl w-full max-w-lg max-h-[82vh] flex flex-col"
+      <div className="bg-surface border border-border rounded-xl w-full max-w-lg max-h-[88vh] flex flex-col"
            onClick={e => e.stopPropagation()}>
 
         {/* Header */}
@@ -128,6 +145,7 @@ function TripStatesModal({ tripId, carId = 1, onClose, timeFormat }) {
         </div>
 
         {data && (() => {
+          const s      = data.stats || {};
           const winStart = new Date(data.trip.start_date).getTime();
           const winEnd   = data.trip.end_date ? new Date(data.trip.end_date).getTime() : Date.now();
           const segs     = normaliseStates(data.states, winStart, winEnd);
@@ -145,10 +163,132 @@ function TripStatesModal({ tripId, carId = 1, onClose, timeFormat }) {
             state: k, ms: totals[k], ...stateCfg(k),
           }));
 
+          // Build stats table rows
+          const dist     = fmtDist(s.total_km, distanceUnit);
+          const dLabel   = distLabel(distanceUnit);
+          const spAvg    = fmtSpeed(s.avg_speed_kmh, distanceUnit);
+          const spMax    = fmtSpeed(s.speed_max, distanceUnit);
+          const sLabel   = speedLabel(distanceUnit);
+          const cons     = fmtConsumption(s.avg_kwh_per_100km, distanceUnit);
+          const cLabel   = consumptionLabel(distanceUnit);
+          const otAvg    = fmtTemp(s.avg_outside_temp, tempUnit);
+          const otMin    = fmtTemp(s.min_outside_temp, tempUnit);
+          const otMax    = fmtTemp(s.max_outside_temp, tempUnit);
+          const itAvg    = fmtTemp(s.avg_inside_temp_driving, tempUnit);
+          const itMin    = fmtTemp(s.min_inside_temp_driving, tempUnit);
+          const itMax    = fmtTemp(s.max_inside_temp_driving, tempUnit);
+          const itpAvg   = fmtTemp(s.avg_inside_temp_parked, tempUnit);
+          const itpMin   = fmtTemp(s.min_inside_temp_parked, tempUnit);
+          const itpMax   = fmtTemp(s.max_inside_temp_parked, tempUnit);
+          const tLabel   = tempLabel(tempUnit);
+
+          const hasSpeed      = spAvg != null || spMax != null;
+          const hasCons       = cons != null || s.total_kwh != null;
+          const hasOutsideTemp = otAvg != null || otMin != null || otMax != null;
+          const hasInsideTemp  = itAvg != null || itMin != null || itMax != null;
+          const hasInsideTempParked = itpAvg != null || itpMin != null || itpMax != null;
+          const hasElev       = s.elevation_min != null || s.elevation_max != null;
+          const hasAscent     = s.total_ascent != null || s.total_descent != null;
+          const hasBattery    = s.battery_min != null || s.battery_max != null;
+          const hasPower      = s.power_max_kw != null || s.power_min_kw != null;
+          const hasCharge     = s.charge_min > 0;
+
           return (
             <>
+              {/* Stats table */}
+              <div className="px-5 pt-3 pb-3 flex-shrink-0">
+                <table className="w-full">
+                  <tbody>
+                    <StatRow
+                      label="Distance / Charging stops"
+                      value={
+                        dist != null
+                          ? `${dist} ${dLabel} / ${s.charge_count ?? 0}`
+                          : null
+                      }
+                    />
+                    {hasSpeed && (
+                      <StatRow
+                        label="Speed (avg / max)"
+                        value={`${spAvg ?? '—'} / ${spMax ?? '—'} ${sLabel}`}
+                      />
+                    )}
+                    {hasPower && (
+                      <StatRow
+                        label="Power (max / regen)"
+                        value={`${s.power_max_kw ?? '—'} / ${s.power_min_kw != null ? Math.abs(s.power_min_kw) : '—'} kW`}
+                      />
+                    )}
+                    {hasCons && (
+                      <StatRow
+                        label="Consumption"
+                        value={
+                          [cons != null ? `${cons} ${cLabel}` : null,
+                           s.total_kwh != null ? `${s.total_kwh} kWh` : null]
+                          .filter(Boolean).join(' · ') || null
+                        }
+                      />
+                    )}
+                    {hasOutsideTemp && (
+                      <StatRow
+                        label="Outside temp (avg / min / max)"
+                        value={`${otAvg ?? '—'} / ${otMin ?? '—'} / ${otMax ?? '—'} ${tLabel}`}
+                      />
+                    )}
+                    {hasInsideTemp && (
+                      <StatRow
+                        label="Inside temp · driving (avg / min / max)"
+                        value={`${itAvg ?? '—'} / ${itMin ?? '—'} / ${itMax ?? '—'} ${tLabel}`}
+                      />
+                    )}
+                    {hasInsideTempParked && (
+                      <StatRow
+                        label="Inside temp · parked (avg / min / max)"
+                        value={`${itpAvg ?? '—'} / ${itpMin ?? '—'} / ${itpMax ?? '—'} ${tLabel}`}
+                      />
+                    )}
+                    {hasElev && (
+                      <StatRow
+                        label="Elevation (avg / min / max)"
+                        value={`${s.elevation_avg ?? '—'} / ${s.elevation_min ?? '—'} / ${s.elevation_max ?? '—'} m`}
+                      />
+                    )}
+                    {hasAscent && (
+                      <StatRow
+                        label="Ascent / Descent"
+                        value={`+${s.total_ascent ?? '—'} / −${s.total_descent ?? '—'} m`}
+                      />
+                    )}
+                    {hasBattery && (
+                      <StatRow
+                        label="Battery (min / max)"
+                        value={`${s.battery_min ?? '—'} / ${s.battery_max ?? '—'} %`}
+                      />
+                    )}
+                    {hasCharge && (
+                      <StatRow
+                        label="Charging"
+                        value={
+                          [fmtDurMs(s.charge_min * 60000),
+                           s.total_charge_kwh > 0 ? `${s.total_charge_kwh} kWh` : null]
+                          .filter(Boolean).join(' · ')
+                        }
+                      />
+                    )}
+                    {s.charge_efficiency != null && (
+                      <StatRow
+                        label="AC efficiency"
+                        value={`${s.charge_efficiency} %`}
+                      />
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <hr className="border-border mx-5 flex-shrink-0" />
+
               {/* Timeline bar */}
-              <div className="px-5 pt-4 pb-3 flex-shrink-0">
+              <div className="px-5 pt-3 pb-2 flex-shrink-0">
                 <div className="w-full rounded-md overflow-hidden flex" style={{ height: '1.2rem', background: '#0f172a' }}>
                   {segs.map((seg, i) => (
                     <div key={i}
@@ -205,6 +345,7 @@ function TripStatesModal({ tripId, carId = 1, onClose, timeFormat }) {
 // ── Trip row (compact, used in widget) ───────────────────────────────────────
 
 function ActiveTripCard({ trip, onStop, onViewStates, timeFormat }) {
+  const { distanceUnit } = useSettings();
   const s = trip.stats || {};
   return (
     <div className="flex flex-col gap-1.5 bg-muted/60 rounded-lg px-3 py-2.5">
@@ -222,11 +363,9 @@ function ActiveTripCard({ trip, onStop, onViewStates, timeFormat }) {
         </button>
       </div>
       <div className="flex gap-3 flex-wrap">
-        <StatPill label="Distance" value={s.total_km} unit="km" />
+        <StatPill label={distLabel(distanceUnit)} value={fmtDist(s.total_km, distanceUnit)} />
         <StatPill label="Drive time" value={fmtDur(s.total_min)} />
-        <StatPill label="Avg speed" value={s.avg_speed_kmh} unit="km/h" />
-        <StatPill label="Max speed" value={s.speed_max} unit="km/h" />
-        <StatPill label="kWh/100" value={s.avg_kwh_per_100km} />
+        <StatPill label={consumptionLabel(distanceUnit)} value={fmtConsumption(s.avg_kwh_per_100km, distanceUnit)} />
       </div>
       <span className="text-[0.6rem] text-dim">Started {fmtDateTime(trip.start_date, timeFormat)}
         {trip.start_odometer != null && ` · ${trip.start_odometer} km`}</span>
